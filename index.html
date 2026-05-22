@@ -157,14 +157,33 @@
       border: 1px solid var(--border);
     }
 
-    /* ── 週次チェック表 ── */
-    .check-table { width: 100%; border-collapse: collapse; }
-    .check-table tr { border-bottom: 1px solid var(--border); }
-    .check-table tr:last-child { border-bottom: none; }
-    .check-table td { padding: 7px 4px; font-size: 0.8rem; vertical-align: middle; }
-    .check-table .td-num  { color: var(--text2); width: 36px; }
-    .check-table .td-date { color: var(--text); }
-    .check-table .td-status { text-align: right; width: 32px; font-size: 1rem; font-weight: 700; }
+    /* ── 週次チェック表（横並び） ── */
+    .week-check-wrap {
+      overflow-x: auto;
+      margin-bottom: 24px;
+    }
+    .week-check {
+      border-collapse: collapse;
+      min-width: 100%;
+      table-layout: fixed;
+    }
+    .week-check th, .week-check td {
+      text-align: center;
+      padding: 8px 4px;
+      font-size: 0.78rem;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .week-check .row-label {
+      font-size: 0.7rem;
+      color: var(--text2);
+      background: var(--bg3);
+      width: 52px;
+      border-right: 1px solid var(--border);
+    }
+    .week-check .row-num  { font-size: 0.72rem; color: var(--text2); }
+    .week-check .row-date { color: var(--text); }
+    .week-check .row-result { font-size: 1.1rem; font-weight: 700; height: 36px; }
     .status-ok { color: var(--success); }
     .status-ng { color: #ef4444; }
 
@@ -308,6 +327,19 @@
 
   <!-- Left: Posts -->
   <main class="posts-area">
+
+    <!-- 週次チェック表（横並び） -->
+    <div class="section-title">📋 週次チェック</div>
+    <div class="week-check-wrap" style="margin-bottom:28px;">
+      <table class="week-check" id="check-table">
+        <tbody>
+          <tr id="row-num"></tr>
+          <tr id="row-date"></tr>
+          <tr id="row-result"></tr>
+        </tbody>
+      </table>
+    </div>
+
     <div class="section-title">📝 アウトプット一覧</div>
 
     <!-- 投稿済みリスト (URLができたら href を追加する) -->
@@ -342,12 +374,6 @@
       <div style="font-size:0.78rem; color:var(--text2);">
         目標: 隔週1件 / 期末まで最低 <strong style="color:var(--text)">9件</strong>
       </div>
-    </div>
-
-    <!-- 週次チェック表 -->
-    <div class="progress-card">
-      <div class="section-title">📋 週次チェック</div>
-      <table class="check-table" id="check-table"></table>
     </div>
 
     <!-- Info -->
@@ -508,7 +534,7 @@
 
   renderProgress();
 
-  // ── 週次チェック表 ──
+  // ── 週次チェック表（横並び） ──
   function getMondayOfWeek(date) {
     const d = new Date(date);
     const day = d.getDay();
@@ -521,9 +547,19 @@
   function renderCheckTable() {
     const now = new Date();
     now.setHours(23, 59, 59, 999);
-    const table = document.getElementById("check-table");
 
-    table.innerHTML = PLANNED_DATES.map((dateStr, i) => {
+    const rowNum    = document.getElementById("row-num");
+    const rowDate   = document.getElementById("row-date");
+    const rowResult = document.getElementById("row-result");
+
+    // ラベル列
+    const labelNum    = `<td class="row-label">回次</td>`;
+    const labelDate   = `<td class="row-label">投稿予定日</td>`;
+    const labelResult = `<td class="row-label">結果</td>`;
+
+    let cellsNum = "", cellsDate = "", cellsResult = "";
+
+    PLANNED_DATES.forEach((dateStr, i) => {
       const planned = new Date(dateStr);
       const monday  = getMondayOfWeek(planned);
       const sunday  = new Date(monday);
@@ -534,23 +570,25 @@
       const isCurrent = monday <= now && now <= sunday;
       const label     = `${planned.getMonth()+1}/${planned.getDate()}`;
 
-      let statusHtml = "";
+      let resultHtml = "";
       if (isPast || isCurrent) {
         const posted = POSTS.some(p => {
           const pd = new Date(p.date);
           return pd >= monday && pd <= sunday;
         });
-        statusHtml = posted
-          ? `<span class="status-ok">✓</span>`
+        resultHtml = posted
+          ? `<span class="status-ok">○</span>`
           : `<span class="status-ng">✗</span>`;
       }
 
-      return `<tr>
-        <td class="td-num">第${i+1}回</td>
-        <td class="td-date">${label}</td>
-        <td class="td-status">${statusHtml}</td>
-      </tr>`;
-    }).join("");
+      cellsNum    += `<td class="row-num">第${i+1}回</td>`;
+      cellsDate   += `<td class="row-date">${label}</td>`;
+      cellsResult += `<td class="row-result">${resultHtml}</td>`;
+    });
+
+    rowNum.innerHTML    = labelNum    + cellsNum;
+    rowDate.innerHTML   = labelDate   + cellsDate;
+    rowResult.innerHTML = labelResult + cellsResult;
   }
 
   renderCheckTable();
