@@ -157,6 +157,17 @@
       border: 1px solid var(--border);
     }
 
+    /* ── 週次チェック表 ── */
+    .check-table { width: 100%; border-collapse: collapse; }
+    .check-table tr { border-bottom: 1px solid var(--border); }
+    .check-table tr:last-child { border-bottom: none; }
+    .check-table td { padding: 7px 4px; font-size: 0.8rem; vertical-align: middle; }
+    .check-table .td-num  { color: var(--text2); width: 36px; }
+    .check-table .td-date { color: var(--text); }
+    .check-table .td-status { text-align: right; width: 32px; font-size: 1rem; font-weight: 700; }
+    .status-ok { color: var(--success); }
+    .status-ng { color: #ef4444; }
+
     /* ── Sidebar ── */
     .sidebar {}
 
@@ -333,6 +344,12 @@
       </div>
     </div>
 
+    <!-- 週次チェック表 -->
+    <div class="progress-card">
+      <div class="section-title">📋 週次チェック</div>
+      <table class="check-table" id="check-table"></table>
+    </div>
+
     <!-- Info -->
     <div class="info-card">
       <strong>投稿ルール</strong><br>
@@ -490,6 +507,53 @@
   }
 
   renderProgress();
+
+  // ── 週次チェック表 ──
+  function getMondayOfWeek(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function renderCheckTable() {
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+    const table = document.getElementById("check-table");
+
+    table.innerHTML = PLANNED_DATES.map((dateStr, i) => {
+      const planned = new Date(dateStr);
+      const monday  = getMondayOfWeek(planned);
+      const sunday  = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+
+      const isPast    = sunday < now;
+      const isCurrent = monday <= now && now <= sunday;
+      const label     = `${planned.getMonth()+1}/${planned.getDate()}`;
+
+      let statusHtml = "";
+      if (isPast || isCurrent) {
+        const posted = POSTS.some(p => {
+          const pd = new Date(p.date);
+          return pd >= monday && pd <= sunday;
+        });
+        statusHtml = posted
+          ? `<span class="status-ok">✓</span>`
+          : `<span class="status-ng">✗</span>`;
+      }
+
+      return `<tr>
+        <td class="td-num">第${i+1}回</td>
+        <td class="td-date">${label}</td>
+        <td class="td-status">${statusHtml}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  renderCheckTable();
 
 </script>
 
