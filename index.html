@@ -157,20 +157,6 @@
       border: 1px solid var(--border);
     }
 
-    .post-placeholder {
-      background: var(--bg2);
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
-      padding: 14px 20px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      opacity: 0.5;
-    }
-    .post-placeholder .ph-date { font-size: 0.8rem; color: var(--text2); min-width: 56px; }
-    .post-placeholder .ph-title { font-size: 0.9rem; color: var(--text2); }
-
     /* ── Sidebar ── */
     .sidebar {}
 
@@ -293,17 +279,6 @@
       margin-top: 20px;
     }
 
-    /* ── 週次チェック表 ── */
-    .check-table { width: 100%; border-collapse: collapse; }
-    .check-table tr { border-bottom: 1px solid var(--border); }
-    .check-table tr:last-child { border-bottom: none; }
-    .check-table td { padding: 7px 4px; font-size: 0.8rem; vertical-align: middle; }
-    .check-table .td-num  { color: var(--text2); width: 36px; }
-    .check-table .td-date { color: var(--text); }
-    .check-table .td-status { text-align: right; width: 32px; font-size: 1rem; font-weight: 700; }
-    .status-ok   { color: var(--success); }
-    .status-ng   { color: #ef4444; }
-    .status-soon { color: var(--text2); font-size: 0.72rem; font-weight: 400; }
   </style>
 </head>
 <body>
@@ -327,8 +302,6 @@
     <!-- 投稿済みリスト (URLができたら href を追加する) -->
     <div id="posts-list"></div>
 
-    <!-- 予定投稿プレースホルダー -->
-    <div id="planned-list"></div>
   </main>
 
   <!-- Right: Sidebar -->
@@ -358,12 +331,6 @@
       <div style="font-size:0.78rem; color:var(--text2);">
         目標: 隔週1件 / 期末まで最低 <strong style="color:var(--text)">9件</strong>
       </div>
-    </div>
-
-    <!-- 週次チェック表 -->
-    <div class="progress-card">
-      <div class="section-title">📋 週次チェック</div>
-      <table class="check-table" id="check-table"></table>
     </div>
 
     <!-- Info -->
@@ -481,7 +448,6 @@
   // ── 投稿リスト描画 ──
   function renderPosts() {
     const list = document.getElementById("posts-list");
-    const planned = document.getElementById("planned-list");
 
     if (POSTS.length === 0) {
       list.innerHTML = `<div style="color:var(--text2);font-size:0.9rem;padding:16px 0;">
@@ -510,15 +476,6 @@
       }).join("");
     }
 
-    // Planned posts placeholder
-    planned.innerHTML = `<div class="section-title" style="margin-top:24px;">⏳ 予定投稿</div>` +
-      PLANNED_DATES.filter(d => !postedDates.has(d)).map(d => {
-        const dt = new Date(d);
-        return `<div class="post-placeholder">
-          <span class="ph-date">${dt.getMonth()+1}/${dt.getDate()}</span>
-          <span class="ph-title">（未投稿）</span>
-        </div>`;
-      }).join("");
   }
 
   renderPosts();
@@ -534,54 +491,6 @@
 
   renderProgress();
 
-  // ── 週次チェック表 ──
-  function getMondayOfWeek(date) {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }
-
-  function renderCheckTable() {
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    const table = document.getElementById("check-table");
-
-    table.innerHTML = PLANNED_DATES.map((dateStr, i) => {
-      const planned  = new Date(dateStr);
-      const monday   = getMondayOfWeek(planned);
-      const sunday   = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      sunday.setHours(23, 59, 59, 999);
-
-      const isPast   = sunday < today;
-      const isCurrent = monday <= today && today <= sunday;
-
-      let statusHtml;
-      if (isPast || isCurrent) {
-        const posted = POSTS.some(p => {
-          const pd = new Date(p.date);
-          return pd >= monday && pd <= sunday;
-        });
-        statusHtml = posted
-          ? `<span class="status-ok">✓</span>`
-          : `<span class="status-ng">✗</span>`;
-      } else {
-        statusHtml = `<span class="status-soon">予定</span>`;
-      }
-
-      const label = `${planned.getMonth()+1}/${planned.getDate()}`;
-      return `<tr>
-        <td class="td-num">第${i+1}回</td>
-        <td class="td-date">${label}</td>
-        <td class="td-status">${statusHtml}</td>
-      </tr>`;
-    }).join("");
-  }
-
-  renderCheckTable();
 </script>
 
 </body>
