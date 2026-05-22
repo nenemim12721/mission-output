@@ -292,6 +292,87 @@
       border-top: 1px solid var(--border);
       margin-top: 20px;
     }
+
+    /* ── 罰ゲームオーバーレイ ── */
+    #punishment-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.93);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      padding: 24px;
+    }
+    #punishment-overlay.show {
+      display: flex;
+      animation: punishIn 0.4s ease;
+    }
+    @keyframes punishIn {
+      from { opacity: 0; transform: scale(0.93); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .punish-icon {
+      font-size: 4.5rem;
+      margin-bottom: 16px;
+      display: inline-block;
+      animation: punishShake 0.6s ease infinite alternate;
+    }
+    @keyframes punishShake {
+      from { transform: rotate(-6deg) scale(1);   }
+      to   { transform: rotate( 6deg) scale(1.05); }
+    }
+    .punish-title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #ef4444;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+    .punish-week {
+      font-size: 0.85rem;
+      color: var(--text2);
+      margin-bottom: 20px;
+    }
+    .punish-message {
+      font-size: 1rem;
+      color: var(--text);
+      max-width: 440px;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+    .punish-count {
+      display: inline-block;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid #ef4444;
+      border-radius: 8px;
+      padding: 6px 18px;
+      font-size: 0.85rem;
+      color: #ef4444;
+      font-weight: 700;
+      margin-bottom: 28px;
+    }
+    .punish-btn {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: opacity 0.15s;
+    }
+    .punish-btn:hover { opacity: 0.82; }
+    .punish-sub {
+      font-size: 0.72rem;
+      color: var(--text2);
+      margin-top: 12px;
+      max-width: 360px;
+    }
   </style>
 </head>
 <body>
@@ -363,6 +444,27 @@
 <footer>
   © 2026 にじぼ Tech Notes
 </footer>
+
+<!-- 罰ゲームオーバーレイ -->
+<div id="punishment-overlay">
+  <div class="punish-icon">🔥</div>
+  <div class="punish-title">今週のアウトプット未達成</div>
+  <div class="punish-week" id="punish-week-label"></div>
+  <div class="punish-message">
+    書きたくなかったのか、忘れていたのか。<br>
+    どちらにせよ、<strong style="color:#ef4444">言い訳は通じない。</strong><br><br>
+    アウトプットなしは成長なし。<br>
+    今週中に必ず投稿すること。
+  </div>
+  <div class="punish-count" id="punish-count-label">累計未達: 1週目</div>
+  <button class="punish-btn" onclick="acknowledgePunishment()">
+    わかった。今週中に投稿する
+  </button>
+  <div class="punish-sub">
+    ※ このボタンを押しても投稿が完了するまで責任は続く。<br>
+    　 来週の日曜日、また確認する。
+  </div>
+</div>
 
 <script>
   // ───────────────────────────────────────────
@@ -515,6 +617,74 @@
   }
 
   renderProgress();
+
+  // ── 週次罰ゲームチェック（日曜日のみ動作） ──
+  function getMondayOfWeek(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function checkWeeklyPunishment() {
+    const today = new Date();
+    if (today.getDay() !== 0) return; // 日曜日のみ
+
+    const monday = getMondayOfWeek(today);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const weekKey = `punish_${monday.toISOString().slice(0,10)}`;
+
+    // すでに承認済みならスキップ
+    if (localStorage.getItem(weekKey + '_ack') === '1') return;
+
+    // この週に予定投稿日があるか確認
+    const hasPlanned = PLANNED_DATES.some(d => {
+      const pd = new Date(d);
+      return pd >= monday && pd <= sunday;
+    });
+    if (!hasPlanned) return; // 投稿予定なし週はスキップ
+
+    // 実際に投稿されたか確認
+    const posted = POSTS.some(p => {
+      const pd = new Date(p.date);
+      return pd >= monday && pd <= sunday;
+    });
+
+    if (!posted) {
+      // 未達として記録
+      localStorage.setItem(weekKey + '_missed', '1');
+
+      // 累計未達カウント
+      const totalMisses = Object.keys(localStorage)
+        .filter(k => k.endsWith('_missed')).length;
+
+      // 表示
+      const fmt = d => `${d.getMonth()+1}月${d.getDate()}日`;
+      document.getElementById('punish-week-label').textContent =
+        `対象週: ${fmt(monday)} 〜 ${fmt(sunday)}`;
+      document.getElementById('punish-count-label').textContent =
+        `累計未達: ${totalMisses}週目`;
+      document.getElementById('punishment-overlay').classList.add('show');
+    }
+  }
+
+  function acknowledgePunishment() {
+    const today = new Date();
+    const monday = getMondayOfWeek(today);
+    const weekKey = `punish_${monday.toISOString().slice(0,10)}`;
+    localStorage.setItem(weekKey + '_ack', '1');
+    document.getElementById('punishment-overlay').classList.remove('show');
+  }
+
+  // グローバルに公開（HTMLのonclickから呼べるように）
+  window.acknowledgePunishment = acknowledgePunishment;
+
+  checkWeeklyPunishment();
 </script>
 
 </body>
