@@ -398,14 +398,13 @@
   //  { date: "YYYY-MM-DD", title: "", summary: "", url: "", tags: [] }
   // ───────────────────────────────────────────
   const POSTS = [
-    // 例（投稿したらここに追加）:
-    // {
-    //   date: "2026-05-29",
-    //   title: "Cursorを業務に取り入れて変わったこと",
-    //   summary: "AIペアプログラミングツールを実務導入して3ヶ月。コーディング速度とレビュー指摘の変化を振り返る。",
-    //   url: "weekly/001.html",
-    //   tags: ["Cursor", "AI", "業務改善"]
-    // },
+    {
+      date: "2026-05-25",
+      title: "バイブコーディングをCoworkで試してみた — コードを書かずにサイトを作る、どこまでいける？",
+      summary: "Coworkへの指示だけでにじぼ Tech Notesを構築。バイブコーディングの実践から見えた業務活用の可能性と注意点。",
+      url: "weekly/001.html",
+      tags: ["Claude", "Cowork", "バイブコーディング", "AI活用"]
+    },
   ];
 
   // ───────────────────────────────────────────
@@ -566,12 +565,14 @@
       sunday.setDate(monday.getDate() + 6);
       sunday.setHours(23, 59, 59, 999);
 
-      const isPast    = sunday < now;
-      const isCurrent = monday <= now && now <= sunday;
-      const label     = `${planned.getMonth()+1}/${planned.getDate()}`;
+      // 予定日当日（23:59:59）を過ぎたら結果を表示する
+      const plannedEnd = new Date(dateStr);
+      plannedEnd.setHours(23, 59, 59, 999);
+      const shouldShow = plannedEnd <= now;
+      const label      = `${planned.getMonth()+1}/${planned.getDate()}`;
 
       let resultHtml = "";
-      if (isPast || isCurrent) {
+      if (shouldShow) {
         const posted = POSTS.some(p => {
           const pd = new Date(p.date);
           return pd >= monday && pd <= sunday;
