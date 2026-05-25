@@ -565,21 +565,23 @@
       sunday.setDate(monday.getDate() + 6);
       sunday.setHours(23, 59, 59, 999);
 
-      // 予定日当日（23:59:59）を過ぎたら結果を表示する
+      const label = `${planned.getMonth()+1}/${planned.getDate()}`;
+
+      // 投稿済みか確認（投稿があれば即○）
+      const posted = POSTS.some(p => {
+        const pd = new Date(p.date);
+        return pd >= monday && pd <= sunday;
+      });
+
+      // 予定日を過ぎて未投稿なら✗、予定日前は空白
       const plannedEnd = new Date(dateStr);
       plannedEnd.setHours(23, 59, 59, 999);
-      const shouldShow = plannedEnd <= now;
-      const label      = `${planned.getMonth()+1}/${planned.getDate()}`;
 
       let resultHtml = "";
-      if (shouldShow) {
-        const posted = POSTS.some(p => {
-          const pd = new Date(p.date);
-          return pd >= monday && pd <= sunday;
-        });
-        resultHtml = posted
-          ? `<span class="status-ok">○</span>`
-          : `<span class="status-ng">✗</span>`;
+      if (posted) {
+        resultHtml = `<span class="status-ok">○</span>`;
+      } else if (plannedEnd <= now) {
+        resultHtml = `<span class="status-ng">✗</span>`;
       }
 
       cellsNum    += `<td class="row-num">第${i+1}回</td>`;
