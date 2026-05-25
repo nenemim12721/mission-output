@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>バイブコーディングをCoworkで試してみた | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero {
+      max-width: 740px; margin: 40px auto 0; padding: 0 24px;
+    }
+    .post-meta {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      font-size: 0.78rem; color: var(--text2); margin-bottom: 12px;
+    }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag {
+      font-size: 0.72rem; padding: 3px 10px; border-radius: 20px;
+      background: var(--bg3); color: var(--accent2); border: 1px solid var(--border);
+    }
+
+    .post-body {
+      max-width: 740px; margin: 0 auto 60px; padding: 0 24px;
+    }
+
+    .section {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 22px 24px; margin-bottom: 16px;
+    }
+    .section h2 {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 12px;
+    }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section ul { padding-left: 1.2em; }
+    .section ul li { font-size: 0.9rem; color: var(--text2); margin-bottom: 4px; }
+
+    .my-take {
+      background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08));
+      border: 1px solid var(--accent);
+      border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px;
+    }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    .ref-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { padding-left: 1.2em; list-style: none; padding-left: 0; }
+    .ref-card ul li { margin-bottom: 6px; }
+    .ref-card a { font-size: 0.85rem; }
+
+    .nav-bottom {
+      max-width: 740px; margin: 0 auto 40px; padding: 0 24px;
+      display: flex; gap: 12px;
+    }
+    .nav-btn {
+      display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem;
+      background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none;
+      transition: all 0.15s;
+    }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav>
+    <a href="../index.html">← ホーム</a>
+  </nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第1回</span>
+    <span>2026年5月25日（月）</span>
+    <span>🤖 AI活用</span>
+  </div>
+  <h1 class="post-title">バイブコーディングをCoworkで試してみた<br>— コードを書かずにサイトを作る、どこまでいける？</h1>
+  <div class="post-tags">
+    <span class="tag">Claude</span>
+    <span class="tag">Cowork</span>
+    <span class="tag">バイブコーディング</span>
+    <span class="tag">AI活用</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 何を調べたか -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>
+      このにじぼ Tech Notes（このサイト自体）の構築をClaude Coworkで行った体験を取り上げます。
+      「バイブコーディング」とはAndrej Karpathyが提唱した概念で、LLMにすべてを委ねてコードをほぼ書かずに開発するスタイルのことです。
+      エンジニアであっても、作りたいものはあるけど環境構築やコードを書く手間がネックになることはある。一方でエンジニアでない人が「作りたい」と思っても、一から学習している時間はなかなか取れない。
+      そのどちらにとっても、バイブコーディングはスタートの摩擦を下げる第一歩になりえると感じ、Coworkへの指示だけでどこまで作れるか試してみました。
+    </p>
+  </div>
+
+  <!-- ② 要約 -->
+  <div class="section">
+    <h2>📝 Coworkに任せたこと</h2>
+    <ul>
+      <li>HTMLの生成・修正 — 「こういうページにしたい」と自然言語で指示するだけで、コードに触れずにファイルが完成した</li>
+      <li>GitHubへのアップロード操作 — git操作を自然言語で委譲でき、コマンドラインを自分で叩かなかった</li>
+      <li>ブラウザのソース取得・UI確認 — 「表示を確認して」と伝えるだけで、目視チェックの代替として機能した</li>
+    </ul>
+  </div>
+
+  <!-- ③ 自分の考え・業務活用案（必須） -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>
+      「これは使えると思った」と感じた瞬間は、ブラウザのソースをCoworkに取得させ、内容を把握・整理したうえでHTMLレポートにまとめてくれたときでした。
+      自分がやっていた作業の流れをそのまま引き受けてくれた感覚があり、ここで初めて「指示するだけでいい」という実感を持ちました。
+    </p>
+    <p>
+      リグレッションテストにしろデザインとの比較にしろ、既存のツールではケースごとに設定ファイルを修正して対応する必要があり、そのオペレーションコストが地味にネックでした。
+      Coworkであれば設定ファイルではなく人の言葉で内容を説明するだけで動かせるため、直感的で実行コストが大幅に下がります。
+      また、導入や仕様への理解に負担が少ないため、エンジニア以外の職種でも比較的扱いやすく、テストやチェック工程における負担を軽減できるのではないかと思いました。
+    </p>
+    <p>
+      一方で注意が必要だと感じた点もあります。検証環境上のデータとデザインデータ上の商品情報などに乖離がある場合、Coworkはそれを「差分」と判断してしまう可能性があります。
+      データの違いによるノイズをどう指示出しで回避するか、プロンプト設計が重要になると思っています。
+    </p>
+  </div>
+
+  <!-- ④ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li><a href="https://x.com/karpathy/status/1886192184808149383" target="_blank" rel="noopener">Andrej Karpathy — "vibe coding"を提唱したポスト（X / 2025年2月）</a></li>
+      <li><a href="https://www.anthropic.com/product/claude-cowork" target="_blank" rel="noopener">Claude Cowork — Anthropic公式製品ページ</a></li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="../index.html" class="nav-btn">← ホームに戻る</a>
+</div>
+
+<footer>
+  © 2026 にじぼ Tech Notes
+</footer>
+
+</body>
+</html>
