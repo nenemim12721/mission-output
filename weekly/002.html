@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude CodeとCursor、Figmaとの相性はどちらが上？ | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      font-size: 0.78rem; color: var(--text2); margin-bottom: 12px;
+    }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag {
+      font-size: 0.72rem; padding: 3px 10px; border-radius: 20px;
+      background: var(--bg3); color: var(--accent2); border: 1px solid var(--border);
+    }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+
+    .section {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 22px 24px; margin-bottom: 16px;
+    }
+    .section h2 {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 12px;
+    }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+    .section ul { padding-left: 1.2em; }
+    .section ul li { font-size: 0.9rem; color: var(--text2); margin-bottom: 4px; }
+
+    .my-take {
+      background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08));
+      border: 1px solid var(--accent);
+      border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px;
+    }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* 比較テーブル */
+    .compare-table {
+      width: 100%; border-collapse: collapse; margin: 16px 0;
+      font-size: 0.85rem;
+    }
+    .compare-table th {
+      background: var(--bg3); color: var(--accent2);
+      padding: 10px 14px; text-align: left; font-size: 0.75rem;
+      border: 1px solid var(--border);
+    }
+    .compare-table td {
+      padding: 10px 14px; border: 1px solid var(--border); color: var(--text2);
+      vertical-align: top;
+    }
+    .compare-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    .badge-ok { color: var(--success); font-weight: 700; }
+    .badge-warn { color: var(--warn); font-weight: 700; }
+
+    /* スクリーンショット比較 */
+    .screenshot-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .screenshot-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .screenshot-card img {
+      width: 100%;
+      display: block;
+    }
+    .screenshot-label {
+      padding: 8px 10px;
+      font-size: 0.72rem;
+      color: var(--text2);
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .label-claude { color: var(--success); }
+    .label-cursor { color: var(--warn); }
+    .label-figma  { color: var(--accent2); }
+
+    /* コードブロック風 */
+    .code-block {
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px 16px; margin: 12px 0;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.82rem; color: var(--accent2);
+      overflow-x: auto;
+    }
+
+    .ref-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; }
+    .ref-card a { font-size: 0.85rem; }
+
+    .nav-bottom {
+      max-width: 740px; margin: 0 auto 40px; padding: 0 24px;
+      display: flex; gap: 12px;
+    }
+    .nav-btn {
+      display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem;
+      background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none;
+      transition: all 0.15s;
+    }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav>
+    <a href="../index.html">← ホーム</a>
+  </nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第2回</span>
+    <span>2026年6月2日（火）</span>
+    <span>🤖 AI活用</span>
+  </div>
+  <h1 class="post-title">Claude CodeとCursor、Figmaとの相性はどちらが上？<br>— 同じデザインデータで実際に試して比べた</h1>
+  <div class="post-tags">
+    <span class="tag">Claude Code</span>
+    <span class="tag">Cursor</span>
+    <span class="tag">Figma</span>
+    <span class="tag">MCP</span>
+    <span class="tag">AI活用</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 何を調べたか -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>
+      現在の案件でCursor×Figmaを使ってコーディングしている。2026年2月にClaude CodeがFigmaと公式統合したことを受けて、同じサンプルデザインを使い両ツールで実際に実装を試み、Figmaとの相性を多方面から比較した。
+    </p>
+    <p>
+      評価軸は「デザイン再現度」だけでなく、「何回の指示で完了できるか（指示コスト）」「どの情報が自動で取れるか」「プランによる制限の有無」も含めた。
+    </p>
+  </div>
+
+  <!-- ② 内容の要約 -->
+  <div class="section">
+    <h2>📝 実験結果の要約</h2>
+
+    <!-- スクリーンショット比較 -->
+    <div class="screenshot-grid">
+      <div class="screenshot-card">
+        <img src="img/figma-design.png" alt="Figmaデザイン原本">
+        <div class="screenshot-label label-figma">Figma デザイン（原本）</div>
+      </div>
+      <div class="screenshot-card">
+        <img src="img/impl-claude.png" alt="Claude Code実装結果">
+        <div class="screenshot-label label-claude">Claude Code 実装（指示1回）</div>
+      </div>
+      <div class="screenshot-card">
+        <img src="img/impl-cursor.png" alt="Cursor実装結果">
+        <div class="screenshot-label label-cursor">Cursor 実装（詳細取得制限あり）</div>
+      </div>
+    </div>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>項目</th>
+          <th>Claude Code</th>
+          <th>Cursor</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>使用したMCPツール</td>
+          <td><span class="badge-ok">get_design_context（1回）</span></td>
+          <td><span class="badge-warn">get_metadata + get_screenshot（制限で途中終了）</span></td>
+        </tr>
+        <tr>
+          <td>色の取得</td>
+          <td><span class="badge-ok">デザイントークン名ごと正確取得（--青: #1730bd）</span></td>
+          <td>スクリーンショットから推定</td>
+        </tr>
+        <tr>
+          <td>フォント情報</td>
+          <td><span class="badge-ok">「Zen Kaku Gothic New Black」まで自動取得</span></td>
+          <td><span class="badge-warn">推定値含む可能性あり</span></td>
+        </tr>
+        <tr>
+          <td>デザイントークン</td>
+          <td><span class="badge-ok">CSS変数名（--青）まで取得</span></td>
+          <td>独自に命名（--color-primary等）</td>
+        </tr>
+        <tr>
+          <td>指示コスト</td>
+          <td><span class="badge-ok">URLを渡すだけ（1往復）</span></td>
+          <td>段階的に確認・指示が必要</td>
+        </tr>
+        <tr>
+          <td>HTML品質</td>
+          <td>デザイン忠実・機能的</td>
+          <td><span class="badge-ok">セマンティックHTML（aria属性・button要素等）が丁寧</span></td>
+        </tr>
+        <tr>
+          <td>双方向連携</td>
+          <td><span class="badge-ok">コード→Figmaへの書き戻しも可能</span></td>
+          <td>Figma→Codeのみ</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      両ツールとも基盤となるFigma MCP Serverは同じ。差が生まれる要因は「どのMCPツールを最初に呼ぶか」と「そのツールがどれだけ情報を返せるか」にある。
+      Claude Codeの<code>get_design_context</code>は1回の呼び出しで構造・色・フォント・デザイントークンを網羅して返す最も強力なツールで、これを最初の1手に使えることが大きい。
+    </p>
+    <p>
+      今回のCursorでは、Figma MCPのStarterプランの呼び出し制限により<code>get_design_context</code>まで到達できず、色・フォントは推定値になった。同じプランで同じ制限がClaude Codeにもかかる点は同条件だが、Claude Codeはその1回を最も効果的なツールに使う設計になっている。
+    </p>
+  </div>
+
+  <!-- ③ 自分の考え・業務への活用案 -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>
+      試してみて、再現度の差よりも「指示コストの差」の方が実務での体感差になると感じた。Claude Codeは「FigmaのURLを渡して」の一言で、デザイントークンの取得からコード生成まで完結した。Cursorは各ステップで確認・介在が必要で、その分Figmaプランの呼び出し枠も消費しやすい。
+    </p>
+    <p>
+      Claude Code推しの立場から正直に言うと、特に以下の2点が実務で効いてくると思っている。
+      1つ目は、デザイントークン名（この場合は「--青」）まで自動取得して変数として使えること。
+      2つ目は、実装後にコードをFigmaキャンバスに書き戻す双方向連携があること。デザイナーとのレビューがその場で完結する流れは、普段のやり取りコストをかなり下げられる。
+    </p>
+    <p>
+      現在の案件は引き続きCursorで対応する。ただ次の案件ではClaude Codeで試したい。
+      なお<code>get_design_context</code>の呼び出し頻度はFigmaのプランに依存するため、チームのFigmaプラン（OrganizationまたはEnterprise）を確認してから導入するのが先決。
+    </p>
+  </div>
+
+  <!-- ④ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li><a href="https://www.figma.com/blog/introducing-claude-code-to-figma/" target="_blank" rel="noopener">From Claude Code to Figma: Turning production code into editable Figma designs — Figma公式ブログ（2026年2月）</a></li>
+      <li><a href="https://zenn.dev/peoplex_blog/articles/2604-figma-ai-coding-practices" target="_blank" rel="noopener">Figma MCPでデザイン通りにAIコーディングするためのプラクティス — Zenn（2026年4月）</a></li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="../index.html" class="nav-btn">← ホームに戻る</a>
+  <a href="001.html" class="nav-btn">← 前の記事</a>
+</div>
+
+<footer>
+  © 2026 にじぼ Tech Notes
+</footer>
+
+</body>
+</html>
