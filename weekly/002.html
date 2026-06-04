@@ -232,8 +232,8 @@
         </tr>
         <tr>
           <td>指示コスト</td>
-          <td><span class="badge-ok">URLを渡すだけ（1往復）</span></td>
-          <td>段階的に確認・指示が必要</td>
+          <td>URLを渡して「実装して」（両ツール同じ）</td>
+          <td>URLを渡して「実装して」（両ツール同じ）</td>
         </tr>
         <tr>
           <td>HTML品質</td>
@@ -261,7 +261,7 @@
   <div class="my-take">
     <h2>💡 自分の考え・業務への活用案</h2>
     <p>
-      試してみて、再現度の差よりも「指示コストの差」の方が実務での体感差になると感じた。Claude Codeは「FigmaのURLを渡して」の一言で、デザイントークンの取得からコード生成まで完結した。Cursorは各ステップで確認・介在が必要で、その分Figmaプランの呼び出し枠も消費しやすい。
+      試してみて、再現度の差よりも「ツールが内部で何を自動でやるかの差」の方が実務での体感差になると感じた。今回の実験では、どちらのツールに対してもFigmaのURLを渡して「実装して」と指示したことは同じ。差が出たのはその先で、Claude Codeは<code>get_design_context</code>を1回呼ぶことでデザイントークン・フォント・構造を一括取得できたのに対し、Cursorは<code>get_metadata</code>と<code>get_screenshot</code>を順に呼んだ結果、呼び出し上限に達して<code>get_design_context</code>まで到達できなかった。
     </p>
     <p>
       Claude Code推しの立場から正直に言うと、特に以下の2点が実務で効いてくると思っている。
