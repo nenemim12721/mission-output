@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIに「初見」でコードを読ませてみる | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      font-size: 0.78rem; color: var(--text2); margin-bottom: 12px;
+    }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag {
+      font-size: 0.72rem; padding: 3px 10px; border-radius: 20px;
+      background: var(--bg3); color: var(--accent2); border: 1px solid var(--border);
+    }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+
+    .section {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 22px 24px; margin-bottom: 16px;
+    }
+    .section h2 {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 12px;
+    }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+    .section ul { list-style: none; padding: 0; margin: 10px 0; }
+    .section ul li {
+      font-size: 0.88rem; color: var(--text2);
+      margin-bottom: 6px; padding-left: 16px; position: relative;
+    }
+    .section ul li::before {
+      content: "›"; position: absolute; left: 0; color: var(--accent);
+    }
+
+    .my-take {
+      background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08));
+      border: 1px solid var(--accent);
+      border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px;
+    }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* クセ一覧カード */
+    .quirk-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .quirk-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 0.82rem;
+      color: var(--text2);
+    }
+    .quirk-card .label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--accent2);
+      margin-bottom: 4px;
+    }
+
+    /* 判定カード（言い切った／要確認） */
+    .verdict-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .verdict-card {
+      background: var(--bg3);
+      border-radius: 8px;
+      padding: 16px;
+      border: 1px solid var(--border);
+    }
+    .verdict-card.ok { border-color: var(--success); }
+    .verdict-card.check { border-color: var(--warn); }
+    .verdict-card h3 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .verdict-card.ok h3 { color: var(--success); }
+    .verdict-card.check h3 { color: var(--warn); }
+    .verdict-card ul { list-style: none; padding: 0; }
+    .verdict-card ul li {
+      font-size: 0.82rem;
+      color: var(--text2);
+      margin-bottom: 6px;
+      padding-left: 14px;
+      position: relative;
+    }
+    .verdict-card.ok ul li::before { content: "✓"; position: absolute; left: 0; color: var(--success); }
+    .verdict-card.check ul li::before { content: "?"; position: absolute; left: 0; color: var(--warn); font-weight: 700; }
+
+    /* CLAUDE.md 引用風 */
+    .doc-quote {
+      background: var(--bg3);
+      border-left: 3px solid var(--accent2);
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      margin: 10px 0;
+      font-size: 0.82rem;
+      color: var(--text2);
+      font-family: 'SFMono-Regular', Consolas, 'Courier New', monospace;
+      white-space: pre-wrap;
+    }
+    .doc-quote .src {
+      display: block;
+      font-family: var(--font);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--accent2);
+      margin-bottom: 6px;
+    }
+
+    .ref-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; }
+    .ref-card a { font-size: 0.85rem; }
+
+    .nav-bottom {
+      max-width: 740px; margin: 0 auto 40px; padding: 0 24px;
+      display: flex; gap: 12px;
+    }
+    .nav-btn {
+      display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem;
+      background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none;
+      transition: all 0.15s;
+    }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+
+    @media (max-width: 600px) {
+      .quirk-grid, .verdict-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav>
+    <a href="../index.html">← ホーム</a>
+  </nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第4回</span>
+    <span>2026年6月23日（火）</span>
+    <span>🤖 AI活用</span>
+  </div>
+  <h1 class="post-title">AIに「初見」でコードを読ませてみる<br>— CLAUDE.md自動生成で見えた「言い切れること」と「要確認」の境界線</h1>
+  <div class="post-tags">
+    <span class="tag">AI活用</span>
+    <span class="tag">ドキュメント</span>
+    <span class="tag">引き継ぎ</span>
+    <span class="tag">CLAUDE.md</span>
+    <span class="tag">マネジメント</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 今回取り上げたもの -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>
+      最近、所属企業から「ただ手を動かすだけでなく、AIやオフショアに指示を出す・マネジメントする」人材への転換を求められている。
+      このために必要なスキルとして自分が考えているのは、(1) 既存プロジェクトの状態をいかに把握・整理して他人（AI／オフショア／チーム）に落とし込めるか、(2) 全体を把握した上で相手が実際に動ける指示を出せるか、の2つ。
+    </p>
+    <p>
+      今回はその(1)に近い実験として、<strong style="color: var(--text);">AIに既存プロジェクトを「初見」で読ませて、引き継ぎ資料（CLAUDE.md形式）を自動生成させてみた。</strong>
+      CLAUDE.mdは、AIエージェント（Claude Code等）が次にそのプロジェクトを触るときに最初に読む前提のドキュメントで、ビルド方法・規約・構成・注意点などをまとめておくもの。これを「人間向けの引き継ぎ書」に見立てて実験した。
+    </p>
+    <p>
+      対象プロジェクトには、実際の業務コードやこのにじぼサイト自体ではなく、<strong style="color: var(--text);">今回のために新規に作成したサンプルプロジェクト</strong>を使った。
+      情報を外に出さない方針のため、というのが一番の理由だが、実務でよくある「クセ」を自分で自由に仕込めるという利点もある。
+      作ったのは、ローカルストレージだけで動くシンプルなタスクボード（HTML 1枚 + JS 5ファイル + CSS 1枚）。
+    </p>
+
+    <div class="quirk-grid">
+      <div class="quirk-card"><span class="label">独自の状態管理</span>Redux等ではなく自前のPub/Sub「Hub」を採用。採用理由はコード上に記録なし</div>
+      <div class="quirk-card"><span class="label">データ移行の痕跡</span>localStorageのキーが task_v1 → tasks_v2 に移行。旧キー読み込み＆変換ロジックが残存</div>
+      <div class="quirk-card"><span class="label">パッチの積み重ね</span>フィルタ処理に「2025-11修正」「2026-02修正」のようなコメント付き修正履歴が複数残る</div>
+      <div class="quirk-card"><span class="label">命名規則の不統一</span>関数名は英語が基本だが、1つだけローマ字（nokoriNissu）が混在</div>
+      <div class="quirk-card"><span class="label">死んだフィーチャーフラグ</span>5つのフラグのうち4つが、実はどこからも参照されていない</div>
+      <div class="quirk-card"><span class="label">マジックナンバー</span>初期描画を437msだけ遅らせる setTimeout。理由はコメントで「特に意味はない」と明記</div>
+    </div>
+  </div>
+
+  <!-- ② 内容の要約 -->
+  <div class="section">
+    <h2>📝 AIは何を「言い切り」、何を「要確認」としたか</h2>
+
+    <p>
+      サンプルプロジェクトのファイル一式をAIに読ませ、CLAUDE.md形式の引き継ぎ資料を生成させた。
+      結果として、コードから機械的に追える事実については、かなり正確に拾えていた。一方で「なぜこうなっているか」という設計意図・経緯が絡む部分は、断定せずに「コード上に記録がなく不明」「要確認」と明記していた。
+    </p>
+
+    <div class="verdict-grid">
+      <div class="verdict-card ok">
+        <h3>✅ AIが言い切ったこと</h3>
+        <ul>
+          <li>5ファイルの読み込み順序とその依存関係</li>
+          <li>Hub（Pub/Sub）の仕組みと持っているデータ構造</li>
+          <li>task_v1 → tasks_v2 の移行ロジックの中身と、移行が「一度だけ」しか走らない点</li>
+          <li>「urgent」フィルタが複数条件の積み重ねであること</li>
+          <li>ソート時、期限なしタスクが同優先度内で最後に来る仕様</li>
+          <li>命名規則の不統一（nokoriNissuのみローマ字）</li>
+          <li>呼び出されていない未使用関数（clearCompleted）の存在</li>
+          <li>437msのsetTimeoutが「意味のない値」とコメントされている事実</li>
+        </ul>
+      </div>
+      <div class="verdict-card check">
+        <h3>❓ AIが「要確認」とした項目</h3>
+        <ul>
+          <li>なぜ自前実装の「Hub」を採用したのか（経緯不明）</li>
+          <li>FEATURE_FLAGSのうち4つが、本当に未使用で削除して良いのか</li>
+          <li>setTimeout(437)が実際に必要なのかどうか</li>
+          <li>ENABLE_URGENT_FILTER / USE_NEW_STORE / ENABLE_BETA_SYNC の各フラグの存在意義</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>個人的に一番興味を持ったのは、生成されたCLAUDE.mdの中の、フィーチャーフラグについての記述。</p>
+
+    <div class="doc-quote"><span class="src">CLAUDE.md より抜粋</span>「SHOW_DEBUG_LOG以外のフラグは、現状コードのどこからも参照されていないように見えます。削除して良いのか、将来の機能のために残しているのか、コードだけでは判断できません。フラグを変更・削除する前に、これらが本当に未使用か（grep等で）再確認し、可能であれば経緯を知る人に確認してください。」</div>
+
+    <p>
+      これは「もっともらしい理由」を作文して埋めることもできたはずの箇所。
+      実際、フィーチャーフラグが残っている理由として「将来用に取っておいた」のような説明は、いかにもそれっぽく書けてしまう。
+      それをせず、「事実として分かること」と「人に聞くべきこと」を分けて出力した点が、引き継ぎ資料としての信頼性に直結すると感じた。
+    </p>
+  </div>
+
+  <!-- ③ 自分の考え・業務への活用案 -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>
+      今回の実験で一番の収穫は、CLAUDE.mdそのものの完成度ではなく、<strong>「AIがどこまで自信を持って言い切り、どこから『分からない』と言うか」の境界線が見えたこと</strong>だと思う。
+      この境界線は、自分が会社から求められている「全体を把握して、相手（AI/オフショア/チーム）が動ける指示を出す」という役割の、ちょうど裏返しに当たる。
+    </p>
+    <p>
+      つまり、相手（AIや初めてプロジェクトに触る人）が「コードや資料から自力でどこまで理解できるか」と、「自分（既存担当者）に確認しないと分からない部分はどこか」を、こちら側が事前に整理しておく必要がある、ということ。
+      今回AIが出したCLAUDE.mdの「要確認」リストは、まさにそのまま<strong>「元担当者へのヒアリング項目リスト」</strong>として使える形になっていた。
+    </p>
+    <p>
+      実務での活用イメージとしては、新しいプロジェクトに途中からジョインするとき、まず手元でAIにコードベースを読ませてCLAUDE.md（または同等の構造化メモ）を生成させ、そこに含まれる「要確認」項目を、元担当者への質問リストの下書きとして使う、という流れが考えられる。
+      ゼロから「何を聞けばいいか分からない」状態よりも、かなり効率的にヒアリングを始められそうだ。
+    </p>
+    <p>
+      逆に、自分がAI/オフショアに指示を出す側になる場合の学びとしては、<strong>「事実」と「意図・背景」を分けて伝える意識</strong>が重要だということ。
+      今回のサンプルのフィーチャーフラグのように、「なぜそれが存在するか」を書き残さないと、後から読む側（AIでも人でも）は「触っても良いもの」と「触ってはいけないもの」を区別できず、最悪の場合は不要な削除や誤った変更につながる。
+    </p>
+    <p>
+      正直に書くと、今回のサンプルプロジェクトは自分が意図的に「クセ」を仕込んだものなので、複数人・複数年の歴史が積み重なった実際の本番コードの複雑さを完全に再現できているわけではない。
+      実プロジェクトでこの手法がどこまで機能するかはまだ未知数で、これは今後、もう少し規模の大きいサンプルか、許可が取れる範囲の実コードの一部で試してみたい。
+    </p>
+  </div>
+
+  <!-- ④ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li><a href="https://docs.anthropic.com/en/docs/claude-code/memory" target="_blank" rel="noopener">How Claude remembers your project（CLAUDE.md / Memory） — Claude Code Docs</a></li>
+      <li><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">Effective context engineering for AI agents — Anthropic Engineering</a></li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="../index.html" class="nav-btn">← ホームに戻る</a>
+  <a href="003.html" class="nav-btn">← 前の記事</a>
+</div>
+
+<footer>
+  © 2026 にじぼ Tech Notes
+</footer>
+
+</body>
+</html>
