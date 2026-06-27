@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>「論点はある」のになぜ手戻りが起きるのか | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      font-size: 0.78rem; color: var(--text2); margin-bottom: 12px;
+    }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag {
+      font-size: 0.72rem; padding: 3px 10px; border-radius: 20px;
+      background: var(--bg3); color: var(--accent2); border: 1px solid var(--border);
+    }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+
+    .section {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 22px 24px; margin-bottom: 16px;
+    }
+    .section h2 {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 12px;
+    }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+    .section ul { list-style: none; padding: 0; margin: 10px 0; }
+    .section ul li {
+      font-size: 0.88rem; color: var(--text2);
+      margin-bottom: 6px; padding-left: 16px; position: relative;
+    }
+    .section ul li::before {
+      content: "›"; position: absolute; left: 0; color: var(--accent);
+    }
+
+    .my-take {
+      background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08));
+      border: 1px solid var(--accent);
+      border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px;
+    }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* 6ステップフロー */
+    .step-flow {
+      display: flex;
+      align-items: flex-end;
+      gap: 0;
+      margin: 20px 0 8px;
+      flex-wrap: wrap;
+      row-gap: 12px;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .step-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text2);
+      background: var(--bg3);
+    }
+    .step.skipped .step-circle {
+      border-color: var(--warn);
+      color: var(--warn);
+      background: rgba(251,191,36,0.08);
+    }
+    .step.highlight .step-circle {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(108,138,255,0.1);
+    }
+    .step-label {
+      font-size: 0.68rem;
+      color: var(--text2);
+      text-align: center;
+      line-height: 1.3;
+    }
+    .step.skipped .step-label { color: var(--warn); }
+    .step.highlight .step-label { color: var(--accent); }
+    .step-arrow {
+      font-size: 1rem;
+      color: var(--border);
+      padding: 0 2px;
+      margin-bottom: 28px;
+      flex-shrink: 0;
+    }
+    .step-arrow.danger { color: var(--warn); }
+
+    .skip-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: var(--warn);
+      color: #000;
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin-bottom: 4px;
+    }
+
+    /* 比較ブロック */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .compare-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .compare-card.bad { border-color: #ef4444; }
+    .compare-card.good { border-color: var(--success); }
+    .compare-card h3 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .compare-card.bad h3 { color: #ef4444; }
+    .compare-card.good h3 { color: var(--success); }
+    .compare-card p {
+      font-size: 0.82rem;
+      color: var(--text2);
+      line-height: 1.6;
+    }
+    .flow-line {
+      font-size: 0.8rem;
+      color: var(--text2);
+      margin: 6px 0;
+    }
+    .flow-line .node {
+      display: inline-block;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+    }
+    .flow-line .node.red { border-color: #ef4444; color: #ef4444; }
+    .flow-line .node.green { border-color: var(--success); color: var(--success); }
+    .flow-line .node.dim { color: var(--text2); }
+    .flow-arrow { color: var(--text2); margin: 0 4px; }
+
+    .ref-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; }
+    .ref-card a { font-size: 0.85rem; }
+
+    .nav-bottom {
+      max-width: 740px; margin: 0 auto 40px; padding: 0 24px;
+      display: flex; gap: 12px;
+    }
+    .nav-btn {
+      display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem;
+      background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none;
+      transition: all 0.15s;
+    }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+
+    @media (max-width: 600px) {
+      .compare-grid { grid-template-columns: 1fr; }
+      .step-circle { width: 40px; height: 40px; font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav>
+    <a href="../index.html">← ホーム</a>
+  </nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第5回</span>
+    <span>2026年6月28日（日）</span>
+    <span>📋 論点思考</span>
+  </div>
+  <h1 class="post-title">「論点はある」のになぜ手戻りが起きるのか<br>— サブ論点を飛ばしていたと気づいた話</h1>
+  <div class="post-tags">
+    <span class="tag">論点思考</span>
+    <span class="tag">フレームワーク</span>
+    <span class="tag">PMO</span>
+    <span class="tag">AI活用</span>
+    <span class="tag">マネジメント</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 今回取り上げたもの -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>
+      業務で情報不足の指摘を受けた後、部署のワークショップにてロ→サ→T→ス→作→アの6ステップを紹介してもらった。「論点が課題」と教わりそこに意識を向けていたが、実際に当てはめてみると、論点は上司から与えられており、自分が飛ばしていたのはサブ論点だった。サブ論点がないまま上司に確認を取りに行くのは最終確認ではなく、実質的には最初の擦り合わせになっていた。
+    </p>
+    <p>
+      今回はこの気づきをもとに、『コンサルが「最初の3年間」で学ぶコト』（高松智史著）で紹介されている6ステップのフレームワークと、自分の実務上の失敗パターンを照らし合わせた内容を書く。
+    </p>
+
+    <!-- 6ステップ可視化 -->
+    <div class="step-flow">
+      <div class="step highlight">
+        <div class="step-circle">ロ</div>
+        <div class="step-label">論点</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step skipped">
+        <div class="skip-badge">SKIP</div>
+        <div class="step-circle">サ</div>
+        <div class="step-label">サブ論点</div>
+      </div>
+      <div class="step-arrow danger">→</div>
+      <div class="step">
+        <div class="step-circle">T</div>
+        <div class="step-label">TASK</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-circle">ス</div>
+        <div class="step-label">スケジュール</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-circle">作</div>
+        <div class="step-label">作業</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-circle">ア</div>
+        <div class="step-label">アウトプット</div>
+      </div>
+    </div>
+    <p style="font-size: 0.78rem; color: var(--warn); margin-top: 4px;">↑ 自分が実際にやっていた動き方。サブ論点を飛ばして直接TASKに落としていた。</p>
+  </div>
+
+  <!-- ② 内容の要約 -->
+  <div class="section">
+    <h2>📝 なぜサブ論点が必要なのか</h2>
+
+    <p>
+      6ステップのそれぞれの役割を整理すると、論点（ロ）は「何に答えるべきか」という問いそのもので、多くの場合は上司やクライアントから与えられる。
+      サブ論点（サ）はその問いを「自分で構造化して分解する」工程であり、同時に上司との方針の擦り合わせが行われる場でもある。TASKはその擦り合わせを経た後の、具体的な作業への落とし込みと最終確認にあたる。
+    </p>
+
+    <div class="compare-grid">
+      <div class="compare-card bad">
+        <h3>❌ サブ論点なしの場合</h3>
+        <div class="flow-line"><span class="node dim">上司から論点</span> <span class="flow-arrow">→</span> <span class="node red">即TASK</span> <span class="flow-arrow">→</span> <span class="node dim">上司へ確認</span></div>
+        <p style="margin-top: 10px;">「最終確認」のつもりで上司に持っていくが、上司にとってはそれが<strong style="color: #ef4444;">初めての擦り合わせのタイミング</strong>になる。方針のズレが最後に発覚するため、手戻りが起きる。</p>
+      </div>
+      <div class="compare-card good">
+        <h3>✅ サブ論点ありの場合</h3>
+        <div class="flow-line"><span class="node dim">上司から論点</span> <span class="flow-arrow">→</span> <span class="node green">サブ論点で擦り合わせ</span> <span class="flow-arrow">→</span> <span class="node dim">TASK→確認</span></div>
+        <p style="margin-top: 10px;">TASK化の前に方針を合わせるステップがある。上司への「最終確認」が本当に最終確認として機能し、手戻りが減る。</p>
+      </div>
+    </div>
+
+    <p>
+      自分の場合、「論点を意識しよう」とは思っていたが、そもそも<strong style="color: var(--text);">論点をサブ論点に落としてからTASKに分解するというフロー自体が頭になかった。</strong>
+      論点が与えられたらそのままTASKを考え始めていたため、上司への確認が「方針確認」ではなく「初回の擦り合わせ」になっていた。
+    </p>
+  </div>
+
+  <!-- ③ 自分の考え・業務への活用案 -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>
+      サブ論点は最初のすり合わせで方針のすり合わせに値するが、そもそも自分の思考において論点をサブ論点に落としそこからさらにタスクに分解していくというフローが存在していなかった。今までのミッションや案件業務でも、サブ論点が抜けていたことで手戻りが起こっていたのだと腑に落ちた。
+    </p>
+    <p>
+      サブ論点なしにAIにタスクを投げると、本来意図していたものとは異なるものがアウトプットされることがある。これは「AIに丸投げをするのはよくない」の本質だと解釈している。サブ論点を立てることで落とし込まれるタスクの精度が上がり、指示の精度が上がる。なので、対象が人であっても対象がAIであってもサブ論点ありきでタスクに落とし込み指示を出す必要がある。
+    </p>
+  </div>
+
+  <!-- ④ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li><a href="https://www.amazon.co.jp/dp/4802613989" target="_blank" rel="noopener">『コンサルが「最初の3年間」で学ぶコト』高松智史著 — Amazon</a>（※本書は未読。今後読みたいと考えている）</li>
+      <li><a href="https://kanataw.com/books/all/takamatsu-books/ro-sa-t-su-sa-a/" target="_blank" rel="noopener">ロ→サ→T→ス→作→ア フレームワーク解説 — 考えるエンジン（著者公式）</a></li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="../index.html" class="nav-btn">← ホームに戻る</a>
+  <a href="004.html" class="nav-btn">← 前の記事</a>
+</div>
+
+<footer>
+  © 2026 にじぼ Tech Notes
+</footer>
+
+</body>
+</html>
