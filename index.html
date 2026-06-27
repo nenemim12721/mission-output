@@ -372,7 +372,7 @@
         <div class="progress-bar-fill" id="prog-bar" style="width:0%"></div>
       </div>
       <div style="font-size:0.78rem; color:var(--text2);">
-        目標: 隔週1件 / 期末まで最低 <strong style="color:var(--text)">9件</strong>
+        目標: 週1件 / 期末まで最低 <strong style="color:var(--text)" id="prog-total">9件</strong>
       </div>
     </div>
 
@@ -382,7 +382,7 @@
       ① 記事等を紹介する場合は単なるリンクではなく<br>
       　 「内容の要約」+「自分の考え/業務への活用案」を添える<br>
       ② スライド1枚相当のアウトプット量を目安にする<br>
-      ③ 隔週金曜日を投稿日の目安にする
+      ③ 毎週日曜日をチェック日の目安にする
     </div>
 
   </aside>
@@ -399,7 +399,14 @@
   // ───────────────────────────────────────────
   const POSTS = [
     {
-      date: "2026-06-23",
+      date: "2026-06-28",
+      title: "「論点はある」のになぜ手戻りが起きるのか — サブ論点を飛ばしていたと気づいた話",
+      summary: "業務で情報不足の指摘を受けた後、6ステップのフレームワークに当てはめて気づいたこと。論点があってもサブ論点を飛ばすと「最終確認」が「初回の擦り合わせ」になる。AIへの指示も同じ構造。",
+      url: "weekly/005.html",
+      tags: ["論点思考", "フレームワーク", "PMO", "AI活用"]
+    },
+    {
+      date: "2026-06-21",
       title: "AIに「初見」でコードを読ませてみる — CLAUDE.md自動生成で見えた「言い切れること」と「要確認」の境界線",
       summary: "サンプルプロジェクトをAIに初見で読ませ、CLAUDE.md形式の引き継ぎ資料を自動生成。コードから断定できることと「要確認」とした項目の境界線から、引き継ぎ・委任の実務への活かし方を考える。",
       url: "weekly/004.html",
@@ -429,23 +436,32 @@
   ];
 
   // ───────────────────────────────────────────
-  //  予定投稿日（隔週金曜）
+  //  チェック日（毎週日曜＝weekly-output-checkタスクの実行日と一致）
+  //  各週（月〜日）に1件投稿があったかをこの日曜日付で判定する
   // ───────────────────────────────────────────
-  const PLANNED_DATES = [
-    "2026-05-29",
-    "2026-06-12",
-    "2026-06-26",
-    "2026-07-10",
-    "2026-07-24",
-    "2026-08-07",
-    "2026-08-21",
-    "2026-09-04",
-    "2026-09-18",
+  const CHECK_DATES = [
+    "2026-05-31",
+    "2026-06-07",
+    "2026-06-14",
+    "2026-06-21",
+    "2026-06-28",
+    "2026-07-05",
+    "2026-07-12",
+    "2026-07-19",
+    "2026-07-26",
+    "2026-08-02",
+    "2026-08-09",
+    "2026-08-16",
+    "2026-08-23",
+    "2026-08-30",
+    "2026-09-06",
+    "2026-09-13",
+    "2026-09-20",
   ];
 
   // ── 投稿済み日付セット ──
   const postedDates = new Set(POSTS.map(p => p.date));
-  const plannedSet  = new Set(PLANNED_DATES.filter(d => !postedDates.has(d)));
+  const plannedSet  = new Set(CHECK_DATES.filter(d => !postedDates.has(d)));
 
   // ── カレンダー ──
   const MONTHS_JP = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
@@ -545,11 +561,12 @@
 
   // ── 進捗バー ──
   function renderProgress() {
-    const total = 9;
+    const total = CHECK_DATES.length;
     const done  = POSTS.length;
     const pct   = Math.min(Math.round(done / total * 100), 100);
     document.getElementById("prog-done").textContent = `${done} / ${total}件`;
     document.getElementById("prog-bar").style.width  = `${pct}%`;
+    document.getElementById("prog-total").textContent = `${total}件`;
   }
 
   renderProgress();
@@ -574,12 +591,12 @@
 
     // ラベル列
     const labelNum    = `<td class="row-label">回次</td>`;
-    const labelDate   = `<td class="row-label">投稿予定日</td>`;
+    const labelDate   = `<td class="row-label">チェック日</td>`;
     const labelResult = `<td class="row-label">結果</td>`;
 
     let cellsNum = "", cellsDate = "", cellsResult = "";
 
-    PLANNED_DATES.forEach((dateStr, i) => {
+    CHECK_DATES.forEach((dateStr, i) => {
       const planned = new Date(dateStr);
       const monday  = getMondayOfWeek(planned);
       const sunday  = new Date(monday);
