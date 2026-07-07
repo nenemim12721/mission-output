@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ロ→サ→T→ス→作→アにおける上位者確認タイミング | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text2); margin-bottom: 12px; }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag { font-size: 0.72rem; padding: 3px 10px; border-radius: 20px; background: var(--bg3); color: var(--accent2); border: 1px solid var(--border); }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+
+    .section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .section h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+
+    .my-take { background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08)); border: 1px solid var(--accent); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* ── フレームワーク図 ── */
+    .framework-wrap {
+      margin: 20px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* カラムヘッダー */
+    .fw-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .fw-header-cell {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      padding: 0 4px;
+    }
+
+    /* ステップ行 */
+    .fw-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      position: relative;
+    }
+
+    /* 定義カード */
+    .fw-def {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .fw-def .step-name {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .fw-def .step-body {
+      font-size: 0.82rem;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+    .fw-def .step-q {
+      font-size: 0.75rem;
+      color: var(--accent2);
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    /* 具体例カード */
+    .fw-ex {
+      background: rgba(108,138,255,0.05);
+      border: 1px solid rgba(108,138,255,0.2);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .fw-ex .ex-body {
+      font-size: 0.82rem;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    /* 確認ポイントバナー */
+    .fw-checkpoint {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(52,211,153,0.08);
+      border: 1px solid var(--success);
+      border-radius: 8px;
+      padding: 8px 14px;
+      margin: 4px 0;
+    }
+    .fw-checkpoint .cp-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: var(--success);
+      color: #000;
+      border-radius: 4px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+    .fw-checkpoint .cp-desc {
+      font-size: 0.8rem;
+      color: var(--success);
+    }
+
+    /* 矢印＋問い */
+    .fw-bridge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 4px;
+    }
+    .fw-bridge .bridge-line {
+      width: 2px;
+      height: 24px;
+      background: var(--border);
+      margin-left: 20px;
+      flex-shrink: 0;
+    }
+    .fw-bridge .bridge-q {
+      font-size: 0.75rem;
+      color: var(--text2);
+      font-style: italic;
+    }
+
+    .ref-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; }
+    .ref-card a { font-size: 0.85rem; }
+
+    .nav-bottom { max-width: 740px; margin: 0 auto 40px; padding: 0 24px; display: flex; gap: 12px; }
+    .nav-btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none; transition: all 0.15s; }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+
+    @media (max-width: 600px) {
+      .fw-header, .fw-row { grid-template-columns: 1fr; }
+      .fw-header-cell:last-child { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav>
+    <a href="../index.html">← ホーム</a>
+  </nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第6回</span>
+    <span>2026年7月7日（月）</span>
+    <span>📋 論点思考</span>
+  </div>
+  <h1 class="post-title">ロ→サ→T→ス→作→アにおける<br>上位者確認タイミングとそのタイミングまでにやるべきこと</h1>
+  <div class="post-tags">
+    <span class="tag">論点思考</span>
+    <span class="tag">フレームワーク</span>
+    <span class="tag">PMO</span>
+    <span class="tag">マネジメント</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 今回取り上げたもの -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>
+      前回の記事でサブ論点の重要性を取り上げたが、「何を問えばいいのか」「どのタイミングで確認を出せばいいのか」まで具体的に落とし切れていなかった。今回は高松智史さんの動画から、ロ→サ→T→ス→作→アの各ステップの定義と、上位者への確認タイミングをより具体的に整理する。
+    </p>
+  </div>
+
+  <!-- ② 内容の要約 -->
+  <div class="section">
+    <h2>📝 6ステップの定義と確認タイミング</h2>
+
+    <p style="margin-bottom: 16px;">
+      論点・サブ論点・サブサブ論点をまとめた<strong style="color: var(--success);">論点スライド</strong>が第一の上位者確認タイミング、サブサブ論点からタスクに降ろしそれが論点の達成につながっているかを確認する<strong style="color: var(--success);">ワークプラン</strong>が第二の確認タイミングとなる。これにより、方向性の確認をしたうえで降ろしたタスクに無駄がないか、方向性のずれたタスクを設定していないかを確認できるフローが完成する。方向性の確認がなかった場合、そのすり合わせもタスク確認で行うことになり、最悪すべてのタスクが見直しになる。また、ワークプランに沿った確認の実施は「この方針に沿ってタスクを立てている」という指標ありきでの評価になるため確認しやすく、タスクを立てる側が異なる方向性で進めていた場合もその指摘がしやすい利点がある。
+    </p>
+
+    <!-- フレームワーク図 -->
+    <div class="framework-wrap">
+      <div class="fw-header">
+        <div class="fw-header-cell">ステップ定義</div>
+        <div class="fw-header-cell">具体例（ABテスト案件）</div>
+      </div>
+
+      <!-- 論点 -->
+      <div class="fw-row">
+        <div class="fw-def">
+          <div class="step-name">論点</div>
+          <div class="step-body">達成したいゴールを設定する</div>
+        </div>
+        <div class="fw-ex">
+          <div class="ex-body">アクションボタンの色を変更するABテストを実施する</div>
+        </div>
+      </div>
+
+      <!-- Bridge 論点→サブ論点 -->
+      <div class="fw-bridge">
+        <div class="bridge-line"></div>
+        <div class="bridge-q">「論点は何で構成されているか？」</div>
+      </div>
+
+      <!-- サブ論点 -->
+      <div class="fw-row">
+        <div class="fw-def">
+          <div class="step-name">サブ論点</div>
+          <div class="step-body">達成に必要な要素をクエスチョン形式で分解する</div>
+        </div>
+        <div class="fw-ex">
+          <div class="ex-body">対象の画面は？　対象の要素は？　対象の資材は？　テストパターンは？</div>
+        </div>
+      </div>
+
+      <!-- Bridge サブ論点→サブサブ論点 -->
+      <div class="fw-bridge">
+        <div class="bridge-line"></div>
+        <div class="bridge-q">「サブ論点は何で構成されているか？」</div>
+      </div>
+
+      <!-- サブサブ論点 -->
+      <div class="fw-row">
+        <div class="fw-def">
+          <div class="step-name">サブサブ論点</div>
+          <div class="step-body">サブ論点をさらにクエスチョン形式で分解できる場合に細分化する</div>
+        </div>
+        <div class="fw-ex">
+          <div class="ex-body">各サブ論点の現状と目指す状態を整理する（現状はどうなっているか？理想はどうか？）</div>
+        </div>
+      </div>
+
+      <!-- 確認ポイント① 論点スライド -->
+      <div class="fw-row" style="margin-top: 6px;">
+        <div class="fw-checkpoint">
+          <span class="cp-badge">✅ 確認① 論点スライド</span>
+          <span class="cp-desc">論点・サブ論点・サブサブ論点をまとめて上位者に方針を確認する</span>
+        </div>
+      </div>
+
+      <!-- Bridge サブサブ論点→タスク -->
+      <div class="fw-bridge">
+        <div class="bridge-line"></div>
+        <div class="bridge-q">「サブサブ論点を決定するには何をするべきか？」</div>
+      </div>
+
+      <!-- タスク -->
+      <div class="fw-row">
+        <div class="fw-def">
+          <div class="step-name">タスク</div>
+          <div class="step-body">サブサブ論点を解決するために起こす行動を設定する</div>
+        </div>
+        <div class="fw-ex">
+          <div class="ex-body">○○の要素の背景色を変更する。Bパターンの場合の条件分岐を追加する。etc…</div>
+        </div>
+      </div>
+
+      <!-- 確認ポイント② ワークプラン -->
+      <div class="fw-row" style="margin-top: 6px;">
+        <div class="fw-checkpoint">
+          <span class="cp-badge">✅ 確認② ワークプラン</span>
+          <span class="cp-desc">タスクが論点の達成につながっているかを確認する。TODO確認会のタイミング</span>
+        </div>
+      </div>
+
+      <!-- Bridge タスク→スケジュール -->
+      <div class="fw-bridge">
+        <div class="bridge-line"></div>
+        <div class="bridge-q"></div>
+      </div>
+
+      <!-- スケジュール -->
+      <div class="fw-row">
+        <div class="fw-def">
+          <div class="step-name">スケジュール</div>
+          <div class="step-body">工数を算出し、期限内のどこに各タスクを組み込むかを設定する</div>
+        </div>
+        <div class="fw-ex">
+          <div class="ex-body">各タスクの作業時間＋レビュー工数を見積もり、着手可能日からスケジュールに入れ込む</div>
+        </div>
+      </div>
+
+      <!-- Bridge スケジュール→アウトプット -->
+      <div class="fw-bridge">
+        <div class="bridge-line"></div>
+        <div class="bridge-q"></div>
+      </div>
+
+      <!-- アウトプット -->
+      <div class="fw-row">
+        <div class="fw-def">
+          <div class="step-name">アウトプット</div>
+          <div class="step-body">案件では納品物、それ以外では資料などを指す</div>
+        </div>
+        <div class="fw-ex">
+          <div class="ex-body">納品</div>
+        </div>
+      </div>
+
+    </div>
+    <!-- /framework-wrap -->
+
+  </div>
+
+  <!-- ③ 自分の考え・業務への活用案 -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>
+      前回取り入れたサブ論点ですが、正直「何を問えばいいのか？」や「どのタイミングで確認出せばいいのか？」は一度の学習では理解が難しいと感じました。そのうえで、今回は自分の具体に降ろせる形まで高松さんの動画の内容からより具体的に整理してみました。慣れないうちは論点スライドとワークプランも成果物として明示することで、お互いに安心して仕事をできるようにするのもありだと感じました。（もちろん、限られた工数の中でアウトプットが増えるので、一概に良いとは言い切れないですが、それでもやるだけの価値はあるかもしれません。）
+    </p>
+    <p>
+      これは推測なのですが、途中のアウトプットがなぜスライドなのかについて、おそらくは要点を簡潔にまとめるためであると考えています。テキストだと文字数の制限がそこまでないので、余計なことも含め全部書いてしまいやすいです。しかし、スライドの場合は文字を入れすぎるとどうしても読みづらくなってしまうため、１枚のスライドという制限があることにより簡潔にまとめた論点〜サブサブ論点の要点だけを書けるというものなのではないでしょうか。
+    </p>
+  </div>
+
+  <!-- ④ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li><a href="https://youtu.be/SIkQxbo9D6Y" target="_blank" rel="noopener">【打ち手バカ上司に価値はない】ニュータイプ管理職・インテレクチャルリーダーシップとは？ — PIVOT 公式チャンネル</a></li>
+      <li><a href="https://youtu.be/JtZAwudXDu8" target="_blank" rel="noopener">【ボスコン流のすごい会議】「オモロイ」生み出す"15度ずらし"の法則 — MANAGEMENT SKILL SET</a></li>
+      <li><a href="https://youtu.be/Fp9qpg_SuhE" target="_blank" rel="noopener">ボスコン流！仕事で結果を出すための「究極の6ステップ」— ダイヤモンド社公式</a></li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="../index.html" class="nav-btn">← ホームに戻る</a>
+  <a href="005.html" class="nav-btn">← 前の記事</a>
+</div>
+
+<footer>
+  © 2026 にじぼ Tech Notes
+</footer>
+
+</body>
+</html>
