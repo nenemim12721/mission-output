@@ -624,8 +624,11 @@
       plannedEnd.setHours(23, 59, 59, 999);
 
       let resultHtml = "";
-      if (posted) {
+      if (posted && plannedEnd <= now) {
         resultHtml = `<span class="status-ok">○</span>`;
+      } else if (posted) {
+        // 投稿済みだがチェック日未到達 — 空白（チェック日に確定）
+        resultHtml = ``;
       } else if (plannedEnd <= now) {
         resultHtml = `<span class="status-ng">✗</span>`;
       }
