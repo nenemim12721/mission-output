@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursorで過去MR指摘と現在の修正を自動照合する仕組みを作った | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24; --danger: #f87171;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text2); margin-bottom: 12px; }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag { font-size: 0.72rem; padding: 3px 10px; border-radius: 20px; background: var(--bg3); color: var(--accent2); border: 1px solid var(--border); }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+    .section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .section h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+
+    .my-take { background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08)); border: 1px solid var(--accent); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* ── フロー図 ── */
+    .flow-wrap { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
+    .flow-step { display: flex; align-items: flex-start; gap: 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .flow-num { background: var(--accent); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+    .flow-content .flow-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .flow-content .flow-desc { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+    .flow-arrow { text-align: center; color: var(--text2); font-size: 0.9rem; }
+
+    /* ── 苦手傾向カード ── */
+    .tendency-wrap { margin: 16px 0; }
+    .tendency-header { display: grid; grid-template-columns: 1fr 80px 60px; gap: 8px; padding: 6px 10px; font-size: 0.7rem; font-weight: 700; color: var(--text2); letter-spacing: 0.05em; margin-bottom: 4px; }
+    .tendency-row { display: grid; grid-template-columns: 1fr 80px 60px; gap: 8px; align-items: center; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 4px; }
+    .tendency-label { font-size: 0.82rem; color: var(--text); }
+    .bar-wrap { height: 10px; background: var(--bg2); border-radius: 5px; overflow: hidden; }
+    .bar { height: 100%; border-radius: 5px; background: var(--warn); }
+    .bar.high { background: var(--danger); }
+    .tendency-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; text-align: center; font-weight: 700; }
+    .badge-high { background: rgba(248,113,113,0.15); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-mid { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid var(--warn); }
+
+    /* ── 出力例カード ── */
+    .output-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 12px 0; font-size: 0.82rem; }
+    .output-card .ok { color: var(--success); font-weight: 700; }
+    .output-card .warn-label { color: var(--warn); font-weight: 700; }
+    .output-card ul { margin: 8px 0 0 16px; color: var(--text2); }
+    .output-card li { margin-bottom: 4px; }
+
+    .ref-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; font-size: 0.85rem; color: var(--text2); }
+
+    .nav-bottom { max-width: 740px; margin: 0 auto 40px; padding: 0 24px; display: flex; gap: 12px; }
+    .nav-btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none; transition: all 0.15s; }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav><a href="../index.html">← ホーム</a></nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第7回</span>
+    <span>2026年7月12日（日）</span>
+    <span>🔧 AI活用</span>
+  </div>
+  <h1 class="post-title">Cursorで過去MR指摘と現在の修正を<br>自動照合する仕組みを作った</h1>
+  <div class="post-tags">
+    <span class="tag">Cursor</span>
+    <span class="tag">GitLab</span>
+    <span class="tag">AI活用</span>
+    <span class="tag">レビュー</span>
+    <span class="tag">品質改善</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 今回取り上げたもの -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>過去のMRレビューで受けた指摘と、現在作業中の修正内容を自動的に照合するツールをCursorとGitLab APIを組み合わせて作成した。</p>
+  </div>
+
+  <!-- ② 内容の要約 -->
+  <div class="section">
+    <h2>📝 仕組みの概要</h2>
+    <p>GitLab APIを使って複数リポジトリ・複数MRのレビューコメントを収集し、<code>past_feedback.md</code> として書き出す。これをCursorのルールファイル（<code>.cursor/rules/</code>）に登録しておくことで、コード編集中にCursorが過去の指摘を常時参照して照合してくれる仕組みになっている。</p>
+
+    <div class="flow-wrap" style="margin-top:16px;">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <div class="flow-title">GitLab API でコメントを収集</div>
+          <div class="flow-desc">自分がAuthorのMRから全体コメント・インラインコメントを両方取得。複数リポジトリを横断。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <div class="flow-title">past_feedback.md に書き出し</div>
+          <div class="flow-desc">MR・レビュアー・コメント本文を Markdown 形式で整理して保存。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <div class="flow-title">Cursor ルールとして登録</div>
+          <div class="flow-desc">コード編集のたびに past_feedback.md を参照して照合するよう Cursor に指示する。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-content">
+          <div class="flow-title">照合結果を出力</div>
+          <div class="flow-desc">「抵触なし / あり」に加え、抵触はしていないが過去指摘に近い箇所を「念のための確認ポイント」として提示。根拠となった過去コメントも引用される。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="output-card" style="margin-top:16px;">
+      <div class="ok">✅ 結果: 過去指摘との抵触なし</div>
+      <div class="warn-label" style="margin-top:10px;">⚠️ 念のための確認ポイント（3件）</div>
+      <ul>
+        <li>public/ 更新あり → MR説明に検品URLを明記すると安心</li>
+        <li>scss/pug変更あり → VRTまたは画面確認の証跡をMRに残す</li>
+        <li>ABテスト系ファイルへの注意コメント追加 → 既存方針と整合</li>
+      </ul>
+    </div>
+
+    <p style="margin-top:12px;">また、同ファイルを使って過去指摘のグルーピング分析も実施した。下記は実際に出力された苦手傾向（対象2MR・サンプル数23件）の一例。</p>
+
+    <div class="tendency-wrap" style="margin-top:12px;">
+      <div class="tendency-header">
+        <span>傾向</span>
+        <span>出現頻度</span>
+        <span>重要度</span>
+      </div>
+      <div class="tendency-row">
+        <span class="tendency-label">影響範囲の広げすぎ</span>
+        <div class="bar-wrap"><div class="bar high" style="width:100%"></div></div>
+        <span class="tendency-badge badge-high">高</span>
+      </div>
+      <div class="tendency-row">
+        <span class="tendency-label">MR説明・証跡の精度</span>
+        <div class="bar-wrap"><div class="bar high" style="width:80%"></div></div>
+        <span class="tendency-badge badge-high">高</span>
+      </div>
+      <div class="tendency-row">
+        <span class="tendency-label">修正対象の特定ミス</span>
+        <div class="bar-wrap"><div class="bar" style="width:40%"></div></div>
+        <span class="tendency-badge badge-mid">中</span>
+      </div>
+      <div class="tendency-row">
+        <span class="tendency-label">PC・既存方針との整合不足</span>
+        <div class="bar-wrap"><div class="bar" style="width:40%"></div></div>
+        <span class="tendency-badge badge-mid">中</span>
+      </div>
+      <div class="tendency-row">
+        <span class="tendency-label">画面確認の後回し</span>
+        <div class="bar-wrap"><div class="bar" style="width:20%"></div></div>
+        <span class="tendency-badge badge-mid">中</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 自分の考え・業務への活用案 -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>現在抱えている課題の一つとして、同じ指摘を繰り返し受けてしまうという点がある。「以前言われたから気を付ける」は至極当然のことだが、それができないから課題になっている。人力だとチェックが漏れてしまったり、そもそも過去の指摘を覚えていない限りすべての指摘をさかのぼるのに莫大な時間がかかる可能性がある。ただでさえ期日がある案件対応などにおいて、人力チェックには限界があるように感じた。</p>
+    <p>そこで、業務で使用するCursorを活用し、過去の指摘と今回の修正内容の照合ができないかという点を検討してみた。結果、複数リポジトリの指摘を横断的に参照可能ということもあり、すべて覚えることや直前に全部網羅しなければという時間的負担を減らせそうであると感じた。出力結果としては、抵触部分のチェックはもちろん、抵触していなくても過去の指摘に近い箇所を「念のための確認ポイント」として提案してくれる。提案の際には具体的な過去の指摘も挙げてくれるので、対応案が今回の案として正しいかの判断も検討しながらチェックできるという点も強いと感じた。</p>
+    <p>また、指摘内容はファイルに格納するようになっているので、このファイルの中身を使用すれば別のチェックへの汎用が可能だと考えられる。例えば、指摘のグルーピングによる苦手傾向の分析などが挙げられる。実際にやってみたが苦手傾向ごとの出現頻度や注意すべき点を挙げてくれるので、無意識に飛ばしがちな点を定期的にチェックしやすい点に加え、急遽振り返る必要が出た時にすぐ確認できる点もよいと感じた。</p>
+    <p>改善点としては、現状は作業プロジェクトのルートにルールファイルを置く方式になっているが、CursorのグローバルルールとしてSettings → Rules for AIに設定すれば、全プロジェクトで自動的に反映されるようになる。今後はその方向で設定を整えていきたい。</p>
+  </div>
+
+  <!-- ④ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li>GitLab REST API — <a href="https://docs.gitlab.com/ee/api/merge_requests.html" target="_blank" rel="noopener">Merge Requests (docs.gitlab.com)</a></li>
+      <li>Cursor — <a href="https://docs.cursor.com/context/rules-for-ai" target="_blank" rel="noopener">Rules for AI (docs.cursor.com)</a></li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="../index.html" class="nav-btn">← ホームに戻る</a>
+  <a href="006.html" class="nav-btn">← 前の記事</a>
+</div>
+
+<footer>© 2026 にじぼ Tech Notes</footer>
+
+</body>
+</html>
