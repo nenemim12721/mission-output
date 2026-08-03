@@ -141,7 +141,8 @@
   <!-- ① 今回取り上げたもの -->
   <div class="section">
     <h2>📌 今回取り上げたもの</h2>
-    <p>Cursor Rulesは「AIへの指示書」として機能するが、英語前提の情報が多く、日本語チームにどう適用するかが不明瞭だった。今回は「Rulesを日本語で書きながら、AIに確実に動いてもらうにはどうするか」を調査した。言語ポリシーの設計、モードの使い分け、効くRulesの書き方、チームでの管理方法まで整理する。</p>
+    <p>現状、Cursorによる工数削減を図るため実装などをCursorによって自動化を進めているが、実装の精度などの部分で完璧とはいいがたいと考えている。そこで、少しでも成果物の精度を上げることができる指示の出し方を検討した。</p>
+    <p>今回は「Rulesを日本語で書きながら、AIに確実に動いてもらうにはどうするか」を調査した。言語ポリシーの設計、モードの使い分け、効くRulesの書き方まで整理する。</p>
   </div>
 
   <!-- ② 言語ポリシー -->
@@ -149,13 +150,14 @@
     <h2>🌐 ① まず言語ポリシーを設定する</h2>
 
     <p><strong style="color:var(--text);">なぜ必要か</strong></p>
-    <p>日本語でRulesを書く前提でやりがちな設定がこれ：</p>
+    <p>日本語で指示を書いても、AIは内部的に英語に変換してから処理している。つまり<strong style="color:var(--text);">日本語の指示 → 英語翻訳 → 推論 → 日本語で返答</strong>という経路をたどる。LLMは圧倒的な量の英語データで事前学習しているため、推論自体は英語の方が安定しやすい構造になっているためだ。</p>
+    <p style="margin-top:10px;">この背景があるため、日本語でRulesを書く前提でやりがちな設定がこれ：</p>
 
     <div class="code-block">Always respond in Japanese.</div>
 
-    <p>これだけだと<strong style="color:var(--danger);">過剰翻訳</strong>が起きる。変数名・関数名まで日本語化しようとしたり、エラーログの引用ニュアンスが壊れたりする。「Always」の制約を文字通り守りすぎるのが原因だ。</p>
+    <p>これだけだと<strong style="color:var(--danger);">過剰翻訳</strong>が起きる。内部翻訳の過程でコードの変数名・関数名まで日本語化しようとしたり、エラーログの引用ニュアンスが壊れたりする。「Always」の制約を文字通り守りすぎるのが原因だ。</p>
 
-    <p style="margin-top:12px;">根本的な理由として、LLMは英語データで圧倒的な量の事前学習をしている。複雑なロジックの組み立てや、バグの原因をCoTで追う処理は<strong style="color:var(--text);">英語ベースの推論パターンの方が安定しやすい</strong>。これを無視して全部日本語に縛ると、推論精度が落ちる。</p>
+    <p style="margin-top:12px;">複雑なロジックの組み立てや、バグの原因を追う処理は<strong style="color:var(--text);">英語ベースの推論パターンの方が安定しやすい</strong>。これを無視して全部日本語に縛ると、推論精度が落ちる。</p>
 
     <p style="margin-top:14px;"><strong style="color:var(--text);">解決策：領域ごとに言語を分ける</strong></p>
 
@@ -191,7 +193,8 @@ alwaysApply: true
   <!-- ③ 4つのモード -->
   <div class="section">
     <h2>🔀 ② 4つのアクティベーションモード</h2>
-    <p>`.cursor/rules/` 配下の `.mdc` ファイルは、フロントマターの書き方でいつ読み込まれるかが変わる。</p>
+    <p>`.cursor/rules/` 配下の `.mdc` ファイルは、<strong style="color:var(--text);">フロントマター</strong>の書き方でいつ読み込まれるかが変わる。</p>
+    <p style="margin-top:8px; font-size:0.82rem; color:var(--text2);">💡 <strong style="color:var(--text);">フロントマターとは</strong>：ファイルの先頭に書く設定情報のこと。<code>---</code> で囲まれた領域に、そのファイルをいつ・どのように読み込むかを定義する。</p>
 
     <table class="compare-table" style="margin-top:14px;">
       <tr>
@@ -309,44 +312,6 @@ named exportのみ使うこと
     <p>チャットで <code>@ルール名.mdc</code> と入力すると、そのルールを手動で強制適用してテストできる。「なぜか効かない」と感じたら、まずglobパターンのタイポを疑う（typoがあると無音で無視される）。</p>
   </div>
 
-  <!-- ⑥ チーム管理 -->
-  <div class="section">
-    <h2>👥 ⑤ チームでの管理方法</h2>
-
-    <p>Cursor Rulesをチームで使う場合の基本方針。</p>
-
-    <div class="flow-wrap" style="margin-top:14px;">
-      <div class="flow-step">
-        <div class="flow-num">1</div>
-        <div class="flow-content">
-          <div class="flow-title">.cursor/rules/ をGitにコミットする</div>
-          <div class="flow-desc">これだけでチーム全員に同じルールが適用される。コミットしないと個人のローカルにしか存在しない。</div>
-        </div>
-      </div>
-      <div class="flow-step">
-        <div class="flow-num">2</div>
-        <div class="flow-content">
-          <div class="flow-title">personal.mdc だけ .gitignore に入れる</div>
-          <div class="flow-desc">個人の作業スタイルや好みをpersonal.mdcに書いてgitignoreすれば、チーム共通ルールと個人設定を分離できる。</div>
-        </div>
-      </div>
-      <div class="flow-step">
-        <div class="flow-num">3</div>
-        <div class="flow-content">
-          <div class="flow-title">グローバル設定（~/.cursor/rules/）は個人用のみ</div>
-          <div class="flow-desc">コーディング規約やアーキテクチャルールをグローバルに置かない。プロジェクトごとに.cursor/rules/で管理するのが原則。</div>
-        </div>
-      </div>
-      <div class="flow-step">
-        <div class="flow-num">4</div>
-        <div class="flow-content">
-          <div class="flow-title">モノレポはネストして管理できる</div>
-          <div class="flow-desc">packages/foo/.cursor/rules/ のようにサブディレクトリにもRulesを置ける。サブディレクトリのルールがルートより優先されるため、パッケージごとに独自の規約を持てる。</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- まとめ -->
   <div class="section">
     <h2>📋 まとめ：何から始めるか</h2>
@@ -375,11 +340,6 @@ named exportのみ使うこと
       </tr>
       <tr>
         <td><strong>4</strong></td>
-        <td>.cursor/rules/ をGitにコミットする</td>
-        <td>チーム全員に即時反映される</td>
-      </tr>
-      <tr>
-        <td><strong>5</strong></td>
         <td>月次でルールを見直す</td>
         <td>古いルールがあると逆に精度が落ちる</td>
       </tr>
@@ -387,9 +347,10 @@ named exportのみ使うこと
   </div>
 
   <!-- ③ 自分の考え -->
-  <div class="pending">
+  <div class="my-take">
     <h2>💭 自分の考え・業務への活用案</h2>
-    <p>実際に導入してみてから追記する。</p>
+    <p>コンフルの用語集のページと連携できるようになると、より案件の内容をAIに理解させやすくなるのではないかと感じた。ただ、これにはおそらくMCPが必要で、案件コンフルの内容を取得するMCPが実現した場合に転用できる内容だと考えている。</p>
+    <p>また、アクティベーションモードについて確認したところ、現状の設定ではAuto Attachedが設定されていた。歴史の長いプロジェクトではコードの修正に制限が設けられていることもあるため、すべてのリクエストに適用されるAlways ApplyやAIが自動判別するAgent Requestedは問題が発生しかねない。現状のAuto Attached設定が適切だと感じた。</p>
   </div>
 
   <!-- ④ 参考リンク -->
