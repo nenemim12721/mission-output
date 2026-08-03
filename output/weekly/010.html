@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursor Rulesを日本語で設計して確実に動かす方法を調べた | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24; --danger: #f87171;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text2); margin-bottom: 12px; }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag { font-size: 0.72rem; padding: 3px 10px; border-radius: 20px; background: var(--bg3); color: var(--accent2); border: 1px solid var(--border); }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+    .section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .section h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+
+    .my-take { background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08)); border: 1px solid var(--accent); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* フロー図 */
+    .flow-wrap { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
+    .flow-step { display: flex; align-items: flex-start; gap: 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .flow-num { background: var(--accent); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+    .flow-content .flow-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .flow-content .flow-desc { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+
+    /* モードテーブル */
+    .compare-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.82rem; }
+    .compare-table th { background: var(--bg3); color: var(--accent); font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    .compare-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .ok-text { color: var(--success); font-weight: 700; }
+    .ng-text { color: var(--danger); }
+
+    /* コードブロック */
+    .code-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 10px 0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.78rem; color: var(--text2); overflow-x: auto; white-space: pre; line-height: 1.6; }
+    .code-label { font-size: 0.7rem; color: var(--accent2); font-weight: 700; margin: 14px 0 4px; }
+
+    /* 言語境界バナー */
+    .lang-boundary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 14px 0; }
+    .lang-cell { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; text-align: center; }
+    .lang-cell .lang-area { font-size: 0.72rem; color: var(--text2); margin-bottom: 4px; }
+    .lang-cell .lang-val { font-size: 0.82rem; font-weight: 700; }
+    .lang-cell.en .lang-val { color: var(--accent); }
+    .lang-cell.ja .lang-val { color: var(--success); }
+
+    /* カテゴリカード */
+    .category-wrap { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+    .category-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .category-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .category-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge-always { background: rgba(248,113,113,0.15); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-auto { background: rgba(108,138,255,0.15); color: var(--accent); border: 1px solid var(--accent); }
+    .badge-agent { background: rgba(167,139,250,0.15); color: var(--accent2); border: 1px solid var(--accent2); }
+    .badge-manual { background: rgba(148,163,184,0.15); color: var(--text2); border: 1px solid var(--text2); }
+    .category-title { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+    .category-desc { font-size: 0.78rem; color: var(--text2); }
+
+    /* ルール書き方 比較 */
+    .rule-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+    .rule-bad, .rule-good { background: var(--bg3); border-radius: 8px; padding: 12px 14px; }
+    .rule-bad { border: 1px solid rgba(248,113,113,0.4); }
+    .rule-good { border: 1px solid rgba(52,211,153,0.4); }
+    .rule-label { font-size: 0.65rem; font-weight: 700; margin-bottom: 8px; }
+    .rule-bad .rule-label { color: var(--danger); }
+    .rule-good .rule-label { color: var(--success); }
+    .rule-text { font-family: 'Consolas', 'Courier New', monospace; font-size: 0.76rem; color: var(--text2); line-height: 1.5; }
+
+    /* 後日追記 */
+    .pending { background: rgba(251,191,36,0.06); border: 1px dashed var(--warn); border-radius: var(--radius); padding: 18px 22px; margin-bottom: 16px; }
+    .pending h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--warn); margin-bottom: 8px; }
+    .pending p { font-size: 0.85rem; color: var(--text2); }
+
+    .ref-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; font-size: 0.85rem; color: var(--text2); }
+
+    .nav-bottom { max-width: 740px; margin: 0 auto 40px; padding: 0 24px; display: flex; gap: 12px; }
+    .nav-btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none; transition: all 0.15s; }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+    .sub-label { font-size: 0.75rem; font-weight: 700; color: var(--text); margin: 16px 0 6px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav><a href="../index.html">← ホーム</a></nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第10回</span>
+    <span>2026年8月2日（日）</span>
+    <span>⚙️ 開発効率化</span>
+  </div>
+  <h1 class="post-title">Cursor Rulesを日本語で設計して<br>確実に動かす方法を調べた</h1>
+  <div class="post-tags">
+    <span class="tag">Cursor</span>
+    <span class="tag">Cursor Rules</span>
+    <span class="tag">AI活用</span>
+    <span class="tag">チーム開発</span>
+    <span class="tag">日本語運用</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 今回取り上げたもの -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>現状、Cursorによる工数削減を図るため実装などをCursorによって自動化を進めているが、実装の精度などの部分で完璧とはいいがたいと考えている。そこで、少しでも成果物の精度を上げることができる指示の出し方を検討した。</p>
+  </div>
+
+  <!-- ② 言語ポリシー -->
+  <div class="section">
+    <h2>🌐 ① まず言語ポリシーを設定する</h2>
+
+    <p><strong style="color:var(--text);">なぜ必要か</strong></p>
+    <p>日本語で指示を書いても、AIは内部的に英語に変換してから処理している。つまり<strong style="color:var(--text);">日本語の指示 → 英語翻訳 → 推論 → 日本語で返答</strong>という経路をたどる。LLMは圧倒的な量の英語データで事前学習しているため、推論自体は英語の方が安定しやすい構造になっているためだ。</p>
+    <p style="margin-top:10px;">この背景があるため、日本語でRulesを書く前提でやりがちな設定がこれ：</p>
+
+    <div class="code-block">Always respond in Japanese.</div>
+
+    <p>これだけだと<strong style="color:var(--danger);">過剰翻訳</strong>が起きる。内部翻訳の過程でコードの変数名・関数名まで日本語化しようとしたり、エラーログの引用ニュアンスが壊れたりする。「Always」の制約を文字通り守りすぎるのが原因だ。</p>
+
+    <p style="margin-top:12px;">複雑なロジックの組み立てや、バグの原因を追う処理は<strong style="color:var(--text);">英語ベースの推論パターンの方が安定しやすい</strong>。これを無視して全部日本語に縛ると、推論精度が落ちる。</p>
+
+    <p style="margin-top:14px;"><strong style="color:var(--text);">解決策：領域ごとに言語を分ける</strong></p>
+
+    <div class="lang-boundary">
+      <div class="lang-cell en">
+        <div class="lang-area">内部推論</div>
+        <div class="lang-val">英語推奨</div>
+      </div>
+      <div class="lang-cell en">
+        <div class="lang-area">コード<br>（変数名・関数名・コメント）</div>
+        <div class="lang-val">英語のみ</div>
+      </div>
+      <div class="lang-cell ja">
+        <div class="lang-area">チャット返答<br>ドキュメント・ラベル</div>
+        <div class="lang-val">日本語</div>
+      </div>
+    </div>
+
+    <p>この境界を明示するLanguage Policyルールを<strong style="color:var(--text);">最初の1枚として必ず設ける</strong>。これが日本語Rulesを動かす前提条件になる。</p>
+
+    <div class="code-label">📄 .cursor/rules/language-policy.mdc</div>
+    <div class="code-block">---
+alwaysApply: true
+---
+
+## 言語ポリシー
+
+- **内部推論（Chain-of-Thought）**: 英語推奨
+- **コード（変数名・関数名・コメント）**: 英語のみ
+- **チャット返答・ドキュメント・ラベル・タスク名など**: 日本語</div>
+  </div>
+
+  <!-- ③ 4つのモード -->
+  <div class="section">
+    <h2>🔀 ② 4つのアクティベーションモード</h2>
+    <p>`.cursor/rules/` 配下の `.mdc` ファイルは、<strong style="color:var(--text);">フロントマター</strong>の書き方でいつ読み込まれるかが変わる。</p>
+    <p style="margin-top:8px; font-size:0.82rem; color:var(--text2);">💡 <strong style="color:var(--text);">フロントマターとは</strong>：ファイルの先頭に書く設定情報のこと。<code>---</code> で囲まれた領域に、そのファイルをいつ・どのように読み込むかを定義する。</p>
+
+    <table class="compare-table" style="margin-top:14px;">
+      <tr>
+        <th>モード</th>
+        <th>フロントマター</th>
+        <th>読み込まれるタイミング</th>
+      </tr>
+      <tr>
+        <td><strong>Always Apply</strong></td>
+        <td><code>alwaysApply: true</code></td>
+        <td>全リクエストで必ず読み込まれる</td>
+      </tr>
+      <tr>
+        <td><strong>Auto Attached</strong></td>
+        <td><code>globs: ["src/**/*.tsx"]</code></td>
+        <td>該当ファイルを開いているとき</td>
+      </tr>
+      <tr>
+        <td><strong>Agent Requested</strong></td>
+        <td><code>description: "..."</code> のみ</td>
+        <td>AIが文脈を読んで判断・自動適用</td>
+      </tr>
+      <tr>
+        <td><strong>Manual</strong></td>
+        <td>フロントマターなし</td>
+        <td>チャットで <code>@ルール名</code> と書いたとき</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:12px;">注意点：<strong style="color:var(--text);">alwaysApplyは使いすぎると重くなる。</strong>全リクエストでトークンを消費するため、プロジェクト全体で2〜3枚以内が目安。言語ポリシーと最低限のプロジェクト概要だけをalwaysApplyにして、それ以外はAutoまたはAgentにするのが基本設計になる。</p>
+
+    <p style="margin-top:10px;">旧 `.cursorrules`（ルートに1ファイル）は非推奨になっている。`.cursor/rules/*.mdc` に移行すること。</p>
+  </div>
+
+  <!-- ④ 4カテゴリ -->
+  <div class="section">
+    <h2>📁 ③ 何を書くか：4カテゴリ</h2>
+    <p>Atlan社の実践をもとに整理した。ファイル数の目安は<strong style="color:var(--text);">5〜8枚</strong>。多すぎると以下の問題が起きる。</p>
+    <ul style="margin: 8px 0 0 20px; font-size:0.85rem; color:var(--text2); line-height:1.9;">
+      <li>どのルールがどのファイルに適用されているか把握できなくなる</li>
+      <li>ルール同士が矛盾・競合しても気づきにくい</li>
+      <li>更新・メンテナンスが追いつかなくなる</li>
+    </ul>
+
+    <div class="category-wrap" style="margin-top:14px;">
+      <div class="category-card">
+        <div class="category-head">
+          <span class="category-badge badge-always">Always</span>
+          <span class="category-title">① プロジェクトルール</span>
+        </div>
+        <div class="category-desc">このプロジェクトが何か、ディレクトリ構造、用語集。Cursorが「どのリポジトリで作業しているか」を理解する地図になる。ここがないとAIは毎回コンテキストなしで動く。</div>
+      </div>
+      <div class="category-card">
+        <div class="category-head">
+          <span class="category-badge badge-always">Always / Auto</span>
+          <span class="category-title">② 技術スタック・コーディング規約</span>
+        </div>
+        <div class="category-desc">フレームワーク・命名規則・コンポーネント構造など。「named exportのみ」「useEffectでデータ取得禁止」のようなチームの規約。特定ファイルにのみ適用したいものはAutoにする。</div>
+      </div>
+      <div class="category-card">
+        <div class="category-head">
+          <span class="category-badge badge-agent">Agent Requested</span>
+          <span class="category-title">③ マイクロワークフロー</span>
+        </div>
+        <div class="category-desc">チームの行動パターン。「ログをどう書くか」「DBマイグレーションに何を含めるか」「フィーチャーフラグをいつ使うか」など。コードの書き方ではなく、作業の進め方。AIが状況を読んで自動適用する。</div>
+      </div>
+      <div class="category-card">
+        <div class="category-head">
+          <span class="category-badge badge-always">Always</span>
+          <span class="category-title">④ メタルール</span>
+        </div>
+        <div class="category-desc">他のルールをどう解釈・優先するか。「ルールが競合したときどちらを優先するか」「ルールにマッチしない状況でどうするか」。今回の言語ポリシーもここに分類される。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 日本語で効く書き方 -->
+  <div class="section">
+    <h2>✍️ ④ 日本語で効くRulesの書き方</h2>
+
+    <p>日本語で書いても動く。ただし書き方に原則がある。</p>
+
+    <p class="sub-label" style="margin-top:14px;">断定形で書く</p>
+    <p>AIは曖昧な指示を無視しやすい。「〜してください」「〜が望ましい」ではなく「〜すること」「〜は禁止」で書く。</p>
+
+    <div class="rule-compare" style="margin-top:10px;">
+      <div class="rule-bad">
+        <div class="rule-label">❌ 無視されやすい</div>
+        <div class="rule-text">propsの型はなるべく
+interfaceで定義してください
+
+関数はできるだけ
+短く保つよう心がけて
+
+default exportより
+named exportを検討してください</div>
+      </div>
+      <div class="rule-good">
+        <div class="rule-label">✅ 効く</div>
+        <div class="rule-text">propsの型は必ず
+interfaceで定義すること
+
+関数は30行以内にすること
+
+named exportのみ使うこと
+（default exportは禁止）</div>
+      </div>
+    </div>
+
+    <p class="sub-label" style="margin-top:16px;">1ファイル1テーマ、100行以内</p>
+    <p>1枚のファイルに複数のテーマを詰め込まない。100行を超えたら分割する。短いほうがAIが解釈しやすく、メンテナンスもしやすい。</p>
+
+    <p class="sub-label" style="margin-top:14px;">重要な制約は末尾に書く</p>
+    <p>LLMはファイル末尾の内容を優先しやすい特性がある。「例外・絶対にやってはいけないこと」は末尾に書くと効果が上がる。</p>
+
+    <p class="sub-label" style="margin-top:14px;">チャットから自動生成する</p>
+    <p>チャット中に「そう、それが正しい」と感じた瞬間に <code>/Generate Cursor Rules</code> を実行すると、その会話を元にルールファイルが自動生成される。一から書く必要がなく、実際の修正のやりとりがそのままRulesになる。</p>
+
+    <p class="sub-label" style="margin-top:14px;">ルールが効いているか確認する</p>
+    <p>チャットで <code>@ルール名.mdc</code> と入力すると、そのルールを手動で強制適用してテストできる。「なぜか効かない」と感じたら、まずglobパターンのタイポを疑う（typoがあると無音で無視される）。</p>
+  </div>
+
+  <!-- まとめ -->
+  <div class="section">
+    <h2>📋 まとめ：何から始めるか</h2>
+    <p>日本語チームでCursor Rulesを導入する場合の優先順位。</p>
+
+    <table class="compare-table" style="margin-top:14px;">
+      <tr>
+        <th>順番</th>
+        <th>やること</th>
+        <th>理由</th>
+      </tr>
+      <tr>
+        <td><strong>1</strong></td>
+        <td>language-policy.mdc を作る（alwaysApply）</td>
+        <td>これがないと日本語Rulesが過剰翻訳を引き起こす</td>
+      </tr>
+      <tr>
+        <td><strong>2</strong></td>
+        <td>プロジェクト概要ルールを作る（alwaysApply）</td>
+        <td>AIがリポジトリのコンテキストを理解できるようになる</td>
+      </tr>
+      <tr>
+        <td><strong>3</strong></td>
+        <td>技術スタック・規約ルールをファイル種別ごとに作る（Auto）</td>
+        <td>必要なときだけ読まれるのでトークン効率がいい</td>
+      </tr>
+      <tr>
+        <td><strong>4</strong></td>
+        <td>月次でルールを見直す</td>
+        <td>古いルールがあると逆に精度が落ちる</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ③ 自分の考え -->
+  <div class="my-take">
+    <h2>💭 自分の考え・業務への活用案</h2>
+    <p>実際に試していないがコンフルの用語集のページと連携できるようになると、より案件の内容の理解をさせやすくなるのではないかと感じた。（ただ、これにはおそらくMCPが必要と考えている。案件コンフルの内容取得のためにMCPを取得した場合に転用できる内容ではあると考えている。）</p>
+    <p>また、アクティベーションモードについて確認したところ、現状の設定ではAuto Attachedが設定されていた。実際、現在のプロジェクトのように歴史の長いプロジェクトにおいて、コードの修正に制限などが設けられていたりもするため、Auto Attached以外のすべてのリクエストに適用するAlways ApplyやAIが自動で判別するAgent Requestedといった設定は問題が発生しかねないので、現状の設定が適切であると感じた。</p>
+  </div>
+
+  <!-- ④ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li>
+        <a href="https://zenn.dev/imkohenauser/articles/cursor-japanese-language-policy-and-figma-mcp" target="_blank">
+          Cursor 3つの日本語運用と日本語コミット設定 | Zenn（Kohen, or Kohei Saito）
+        </a>
+        — 言語境界設計の3パターンと実運用報告（2026/06更新）
+      </li>
+      <li>
+        <a href="https://blog.atlan.com/engineering/cursor-rules/" target="_blank">
+          Cursor Rules in Action: How Our Engineers Use It at Atlan
+        </a>
+        — 4カテゴリ分類と実践的なルール設計の考え方
+      </li>
+      <li>
+        <a href="https://techsy.io/en/blog/cursor-rules-guide" target="_blank">
+          Cursor Rules: .mdc Frontmatter, globs & alwaysApply | TECHSY
+        </a>
+        — 4モード・Token Tax・チーム管理の網羅ガイド
+      </li>
+      <li>
+        <a href="https://dev.to/olivia_craft/cursor-rules-for-teams-how-to-share-ai-rules-across-your-entire-codebase-4l0g" target="_blank">
+          Cursor Rules for Teams: How to Share AI Rules Across Your Entire Codebase
+        </a>
+        — チームでのRules共有・Gitコミット戦略
+      </li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="009.html" class="nav-btn">← 第9回</a>
+  <a href="../index.html" class="nav-btn">ホーム</a>
+</div>
+
+<footer>
+  にじぼ Tech Notes — 七海ナナメのAI活用アウトプット
+</footer>
+
+</body>
+</html>
