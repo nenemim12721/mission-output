@@ -399,6 +399,48 @@
   // ───────────────────────────────────────────
   const POSTS = [
     {
+      date: "2026-09-20",
+      title: "Cursorの新機能「Origin」を調べた — GitHubの代わりになるコードホスティングか",
+      summary: "2026年8月17日にベータ公開されたCursor Origin（コードホスティング機能）を調査。GitHubとの同期の仕組みと現時点の制約（SLA未公開・GitHub中心の同期）を整理し、GitLab環境での位置づけを考察。実践結果は後日追記予定。",
+      url: "weekly/016.html",
+      tags: ["Cursor", "Origin", "GitHub", "GitLab", "AI活用"]
+    },
+    {
+      date: "2026-09-13",
+      title: "大きな機能要望をAI/オフショア向けタスクに分解する練習をした",
+      summary: "アジャイル開発のユーザーストーリー分割技法（ワークフローステップ・機能分解・受け入れ条件ベースなど6種）とINVEST基準を調査し、抽象化した題材で実際に分解を練習。受け入れ条件がAI/オフショアへの指示に転用できる視点を整理。実践結果は後日追記予定。",
+      url: "weekly/015.html",
+      tags: ["タスク分解", "オフショア", "アジャイル", "マネジメント", "AI活用"]
+    },
+    {
+      date: "2026-09-06",
+      title: "AIプロンプト設計とオフショア向け指示書、原則を比較してみた",
+      summary: "AIプロンプト設計の原則（明確さ・肯定形指示・出力フォーマット明示など）とオフショア向け指示の原則（平易な言葉・理解度確認・文書化など）を調査し、共通点・相違点を比較表で整理。第10回のCursor Rules原則との接続にも言及。実践結果は後日追記予定。",
+      url: "weekly/014.html",
+      tags: ["プロンプト設計", "オフショア", "マネジメント", "AI活用", "指示設計"]
+    },
+    {
+      date: "2026-08-29",
+      title: "Cursorの新機能「Subscriptions」でクラウドエージェントがイベント駆動で動く仕組みを調べた",
+      summary: "2026年8月19日にリリースされたCursorの新機能「Subscriptions」を調査。PR・Slack・Linear・Timerのイベントを購読し、再プロンプトなしで作業を再開する仕組みと、GitHub・Slack・Linear・Timerのみ対応でGitLabは非対応という制約を整理。実践結果は後日追記予定。",
+      url: "weekly/013.html",
+      tags: ["Cursor", "Cloud Agent", "Subscriptions", "イベント駆動", "AI活用"]
+    },
+    {
+      date: "2026-08-14",
+      title: "Confluenceの用語集ページとCursorを連携させる仕組みを設計した",
+      summary: "案件Confluenceの用語集ページとCursorを連携させる検証設計。Atlassian公式MCP（OAuth連携）の機能整理、セットアップ手順、Agent Requestedで参照条件を明記するCursor Rule案、Pull型ゆえの同期限界まで整理。実践結果は後日追記予定。",
+      url: "weekly/012.html",
+      tags: ["Cursor", "Confluence", "MCP", "ナレッジ連携", "AI活用"]
+    },
+    {
+      date: "2026-08-10",
+      title: "CursorとGitLab MCPでコードレビューまで自動化できるか調べた",
+      summary: "前回のMR自動生成の延長として、GitLab MCPでコードレビューまで対応できるかを調査。MR分析・diff取得・レビューコメント投稿などの機能と、MR作成時とは異なる方式（MCP優勢）の使い分けを整理。実践結果は後日追記予定。",
+      url: "weekly/011.html",
+      tags: ["Cursor", "GitLab", "MCP", "コードレビュー", "AI活用"]
+    },
+    {
       date: "2026-08-02",
       title: "Cursor Rulesを日本語で設計して確実に動かす方法を調べた",
       summary: "日本語チームがCursor Rulesを運用するための設計をまとめた。「Always respond in Japanese.」だけでは過剰翻訳が起きる原因から、言語ポリシーの作り方、4つのアクティベーションモード、4カテゴリの分類、断定形での書き方、チームでのGit管理まで整理。実践結果は後日追記予定。",
@@ -492,6 +534,8 @@
     "2026-09-06",
     "2026-09-13",
     "2026-09-20",
+    "2026-09-27",
+    "2026-10-04",
   ];
 
   // ── 投稿済み日付セット ──
