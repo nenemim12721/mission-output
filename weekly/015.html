@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大きな機能要望をAI/オフショア向けタスクに分解する練習をした | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24; --danger: #f87171;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text2); margin-bottom: 12px; }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag { font-size: 0.72rem; padding: 3px 10px; border-radius: 20px; background: var(--bg3); color: var(--accent2); border: 1px solid var(--border); }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+    .section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .section h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+
+    .my-take { background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08)); border: 1px solid var(--accent); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* カテゴリカード（分割技法） */
+    .category-wrap { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+    .category-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .category-title { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .category-desc { font-size: 0.78rem; color: var(--text2); }
+
+    /* チェックリスト */
+    .checklist { list-style: none; padding: 0; margin: 12px 0; }
+    .checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: var(--text2); padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .checklist li:last-child { border-bottom: none; }
+    .check-icon { color: var(--success); font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+
+    /* フロー図 */
+    .flow-wrap { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
+    .flow-step { display: flex; align-items: flex-start; gap: 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .flow-num { background: var(--accent); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+    .flow-content .flow-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .flow-content .flow-desc { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+    .flow-arrow { text-align: center; color: var(--text2); font-size: 0.9rem; }
+
+    /* コードブロック */
+    .code-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 12px 0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.78rem; color: var(--text2); overflow-x: auto; white-space: pre; }
+    .code-label { font-size: 0.7rem; color: var(--accent2); font-weight: 700; margin-bottom: 6px; }
+
+    /* 後日追記プレースホルダー */
+    .pending { background: rgba(251,191,36,0.06); border: 1px dashed var(--warn); border-radius: var(--radius); padding: 18px 22px; margin-bottom: 16px; }
+    .pending h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--warn); margin-bottom: 8px; }
+    .pending p { font-size: 0.85rem; color: var(--text2); }
+
+    .ref-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; font-size: 0.85rem; color: var(--text2); }
+
+    .nav-bottom { max-width: 740px; margin: 0 auto 40px; padding: 0 24px; display: flex; gap: 12px; }
+    .nav-btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none; transition: all 0.15s; }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+    .sub-label { font-size: 0.75rem; font-weight: 700; color: var(--text); margin: 16px 0 6px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav><a href="../index.html">← ホーム</a></nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第15回</span>
+    <span>2026年9月13日（日）</span>
+    <span>🧩 タスク設計</span>
+  </div>
+  <h1 class="post-title">大きな機能要望をAI/オフショア向け<br>タスクに分解する練習をした</h1>
+  <div class="post-tags">
+    <span class="tag">タスク分解</span>
+    <span class="tag">オフショア</span>
+    <span class="tag">アジャイル</span>
+    <span class="tag">マネジメント</span>
+    <span class="tag">AI活用</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 今回取り上げたもの -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>第3回のAsana記事の延長として、曖昧な機能要望を「AIやオフショアメンバーが実際に動ける粒度」まで分解するプロセスを整理した。アジャイル開発で使われる「ユーザーストーリー分割」の技法を調べ、実際の案件を抽象化した題材に当てはめて練習してみた。</p>
+  </div>
+
+  <!-- ② 分割技法 -->
+  <div class="section">
+    <h2>🧩 ① ストーリー分割の代表的な技法</h2>
+    <p>大きな要望は見積もりづらく、1スプリントに収まらず、フィードバックも遅れる。これを防ぐための分割技法を調べたところ、代表的なものが6つ見つかった。</p>
+
+    <div class="category-wrap" style="margin-top:14px;">
+      <div class="category-card">
+        <div class="category-title">① ワークフローステップ</div>
+        <div class="category-desc">ユーザーが目的達成までに踏む手順ごとに分割する。例：オンライン購入なら「商品選択」「決済」「注文確認」に分ける。</div>
+      </div>
+      <div class="category-card">
+        <div class="category-title">② 機能分解</div>
+        <div class="category-desc">機能単位で分割する。例：ユーザー登録なら「プロフィール作成」「メール認証」「プロフィール編集」に分ける。</div>
+      </div>
+      <div class="category-card">
+        <div class="category-title">③ 受け入れ条件ベース</div>
+        <div class="category-desc">要望の受け入れ条件を洗い出し、条件ごとに独立して実装・検証できる単位に分ける。</div>
+      </div>
+      <div class="category-card">
+        <div class="category-title">④ ロールベース</div>
+        <div class="category-desc">利用者の役割（管理者／一般ユーザーなど）ごとに、必要な権限・操作が異なる部分を分ける。</div>
+      </div>
+      <div class="category-card">
+        <div class="category-title">⑤ 接続詞分析</div>
+        <div class="category-desc">要望文に「〜と〜」「〜だが」「〜または」が含まれる場合、それぞれを単一の要望に分割する。</div>
+      </div>
+      <div class="category-card">
+        <div class="category-title">⑥ 最小構成から</div>
+        <div class="category-desc">「一番シンプルな形は何か」を先に切り出し、バリエーションや例外処理は別タスクとして後回しにする。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ INVEST -->
+  <div class="section">
+    <h2>✅ ② 分割後のチェック基準：INVEST</h2>
+    <p>分割した後のタスクが「ちょうどいい粒度」かどうかは、INVEST基準で確認できる。</p>
+    <ul class="checklist" style="margin-top:10px;">
+      <li><span class="check-icon">✓</span><span><strong>Independent（独立している）</strong> — 他のタスクに依存せず単体で進められるか</span></li>
+      <li><span class="check-icon">✓</span><span><strong>Valuable（価値がある）</strong> — そのタスク単体で意味のある成果になっているか</span></li>
+      <li><span class="check-icon">✓</span><span><strong>Estimable（見積もれる）</strong> — 作業量が予測できる大きさか</span></li>
+      <li><span class="check-icon">✓</span><span><strong>Small（小さい）</strong> — 1回の依頼・1スプリントに収まる大きさか</span></li>
+      <li><span class="check-icon">✓</span><span><strong>Testable（検証できる）</strong> — 完了したかどうかを明確に判定できるか</span></li>
+    </ul>
+  </div>
+
+  <!-- ④ 実際に当てはめる -->
+  <div class="section">
+    <h2>🛠 ③ 実際に当てはめてみる</h2>
+    <p>題材として「問い合わせフォームに、担当者への自動振り分け機能を追加してほしい」という要望（抽象化した例）を分解してみた。</p>
+
+    <div class="flow-wrap" style="margin-top:14px;">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <div class="flow-title">接続詞分析でまず分離</div>
+          <div class="flow-desc">「フォーム機能」と「自動振り分け機能」は別要望として分離する（"と"で繋がっている）。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <div class="flow-title">最小構成を先に切り出す</div>
+          <div class="flow-desc">「固定担当者1名への振り分け」を最小構成とし、「カテゴリ別振り分け」「負荷分散」は別タスクに回す。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <div class="flow-title">ワークフローステップで分割</div>
+          <div class="flow-desc">「振り分けルールの設定画面」「振り分け処理の実装」「通知メール送信」に分ける。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-content">
+          <div class="flow-title">各タスクをINVESTで確認</div>
+          <div class="flow-desc">「振り分け処理の実装」は他タスクに依存せず単体でテストできるかを確認し、依存があれば順序を明記する。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ AI/オフショアへの指示への転用 -->
+  <div class="section">
+    <h2>🤖 ④ AI/オフショアへの指示に転用する視点</h2>
+    <p>第14回で整理した「明確さ・出力フォーマットの明示」は、ここで言う「受け入れ条件ベースの分割」と同じ働きをする。分割したタスクごとに受け入れ条件（＝完了の定義）を先に書いておけば、そのままAIへのプロンプトやオフショアメンバーへの指示書に転用できる。逆に言うと、受け入れ条件が書けないタスクは、まだ分割が甘いというサインだと考えられる。</p>
+  </div>
+
+  <!-- ⑥ 自分の考え -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>（後日追記予定）</p>
+  </div>
+
+  <!-- ⑦ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li><a href="https://storiesonboard.com/blog/9-techniques-for-splitting-user-stories" target="_blank" rel="noopener">9 Powerful Techniques For Splitting User Stories | StoriesOnBoard</a> — 分割技法の一覧</li>
+      <li><a href="https://premieragile.com/splitting-epics-and-user-stories/" target="_blank" rel="noopener">Epics to User Stories Slicing Techniques | PremierAgile</a> — エピックからの分割手順</li>
+      <li><a href="https://www.businessanalysisexperts.com/splitting-user-stories-techniques/" target="_blank" rel="noopener">8 Techniques for Splitting User Stories | Business Analysis Experts</a> — INVEST基準の解説</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="014.html" class="nav-btn">← 第14回</a>
+  <a href="../index.html" class="nav-btn">ホーム</a>
+</div>
+
+<footer>
+  にじぼ Tech Notes — 七海ナナメのAI活用アウトプット
+</footer>
+
+</body>
+</html>

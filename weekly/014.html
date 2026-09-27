@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIプロンプト設計とオフショア向け指示書、原則を比較してみた | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24; --danger: #f87171;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text2); margin-bottom: 12px; }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag { font-size: 0.72rem; padding: 3px 10px; border-radius: 20px; background: var(--bg3); color: var(--accent2); border: 1px solid var(--border); }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+    .section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .section h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+
+    .my-take { background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08)); border: 1px solid var(--accent); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* チェックリスト */
+    .checklist { list-style: none; padding: 0; margin: 12px 0; }
+    .checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: var(--text2); padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .checklist li:last-child { border-bottom: none; }
+    .check-icon { color: var(--success); font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+
+    /* 比較テーブル */
+    .compare-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.82rem; }
+    .compare-table th { background: var(--bg3); color: var(--accent); font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    .compare-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .ok-text { color: var(--success); font-weight: 700; }
+
+    /* コードブロック */
+    .code-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 12px 0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.78rem; color: var(--text2); overflow-x: auto; white-space: pre; }
+    .code-label { font-size: 0.7rem; color: var(--accent2); font-weight: 700; margin-bottom: 6px; }
+
+    /* 後日追記プレースホルダー */
+    .pending { background: rgba(251,191,36,0.06); border: 1px dashed var(--warn); border-radius: var(--radius); padding: 18px 22px; margin-bottom: 16px; }
+    .pending h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--warn); margin-bottom: 8px; }
+    .pending p { font-size: 0.85rem; color: var(--text2); }
+
+    .ref-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; font-size: 0.85rem; color: var(--text2); }
+
+    .nav-bottom { max-width: 740px; margin: 0 auto 40px; padding: 0 24px; display: flex; gap: 12px; }
+    .nav-btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none; transition: all 0.15s; }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+    .sub-label { font-size: 0.75rem; font-weight: 700; color: var(--text); margin: 16px 0 6px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav><a href="../index.html">← ホーム</a></nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第14回</span>
+    <span>2026年9月6日（日）</span>
+    <span>🗣️ 指示設計</span>
+  </div>
+  <h1 class="post-title">AIプロンプト設計とオフショア向け指示書、<br>原則を比較してみた</h1>
+  <div class="post-tags">
+    <span class="tag">プロンプト設計</span>
+    <span class="tag">オフショア</span>
+    <span class="tag">マネジメント</span>
+    <span class="tag">AI活用</span>
+    <span class="tag">指示設計</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 今回取り上げたもの -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>会社から求められている「手を動かすだけでなく、AIやオフショアに指示を出す・マネジメントする」人材への転換に向けて、「AIに伝わる指示」と「オフショアメンバーに伝わる指示」の原則を並べて比較した。両者は宛先がAIか人かという違いはあるが、根っこの原則が重なる部分が多いのではという仮説で調査した。</p>
+  </div>
+
+  <!-- ② AIプロンプト設計の原則 -->
+  <div class="section">
+    <h2>🤖 ① AIプロンプト設計の原則</h2>
+    <ul class="checklist" style="margin-top:6px;">
+      <li><span class="check-icon">✓</span><span><strong>明確さ・具体性</strong> — 推測させず、直接的に求めることを述べる。曖昧さをなくすことで出力のばらつきが大きく減る</span></li>
+      <li><span class="check-icon">✓</span><span><strong>肯定形で指示する</strong> — 「〜しないで」ではなく「〜すること」で伝えるほうが、AIの処理が望ましい結果に向きやすい</span></li>
+      <li><span class="check-icon">✓</span><span><strong>出力フォーマットを明示</strong> — 表・箇条書き・JSON構造など、形式を解釈に委ねない</span></li>
+      <li><span class="check-icon">✓</span><span><strong>具体例を示す</strong> — 良い例1つは100語の説明に匹敵する</span></li>
+      <li><span class="check-icon">✓</span><span><strong>入力データと指示を区切る</strong> — デリミタ（<code>"""</code>や<code>&lt;input&gt;</code>など）で明確に分離する</span></li>
+    </ul>
+  </div>
+
+  <!-- ③ オフショア向け指示の原則 -->
+  <div class="section">
+    <h2>🌏 ② オフショア向け指示の原則</h2>
+    <ul class="checklist" style="margin-top:6px;">
+      <li><span class="check-icon">✓</span><span><strong>平易な言葉を使う</strong> — 専門用語・慣用句（「circle back」など）を避け、シンプルな表現にする</span></li>
+      <li><span class="check-icon">✓</span><span><strong>理解度を確認する</strong> — 要約させる、自分の言葉で言い換えさせる。文化によっては「わかりました」が礼儀的な相槌でしかない場合がある</span></li>
+      <li><span class="check-icon">✓</span><span><strong>口頭だけでなく文書化する</strong> — 曖昧さ・迷いを避けるため、各タスクを明確かつ簡潔な文書として残す</span></li>
+      <li><span class="check-icon">✓</span><span><strong>自己完結したSOPを作る</strong> — リモート向けの手順書は省略が効かない。自己完結・具体的・視覚的であることが求められる</span></li>
+      <li><span class="check-icon">✓</span><span><strong>期待値を早期に明確化する</strong> — タスク・責任範囲・期限を明示し、決定事項と担当・期限をまとめて共有する</span></li>
+    </ul>
+  </div>
+
+  <!-- ④ 比較 -->
+  <div class="section">
+    <h2>⚖️ ③ 共通点・相違点</h2>
+    <table class="compare-table" style="margin-top:6px;">
+      <tr>
+        <th>観点</th>
+        <th>AI向け</th>
+        <th>オフショア向け</th>
+      </tr>
+      <tr>
+        <td>明確さ・具体性</td>
+        <td colspan="2" class="ok-text">共通 — どちらも曖昧な指示は誤った解釈を招く</td>
+      </tr>
+      <tr>
+        <td>文書化</td>
+        <td colspan="2" class="ok-text">共通 — 口頭・チャットの一言で済ませず、参照できる形で残す</td>
+      </tr>
+      <tr>
+        <td>期待値の明示</td>
+        <td colspan="2" class="ok-text">共通 — フォーマット・成果物の形を先に決めておく</td>
+      </tr>
+      <tr>
+        <td>理解度の確認方法</td>
+        <td>出力結果そのものが確認になる（再現性を見る）</td>
+        <td>要約・言い換えを依頼して確認する必要がある（相槌だけでは不十分）</td>
+      </tr>
+      <tr>
+        <td>言葉選びの配慮</td>
+        <td>慣用句を避ける理由は主に解釈のブレ防止</td>
+        <td>文化・言語背景への配慮が別途必要（礼儀的な同意への注意など）</td>
+      </tr>
+      <tr>
+        <td>フィードバックの速度</td>
+        <td>即時。ダメなら聞き方を変えてすぐ再試行できる</td>
+        <td>タイムゾーン・スケジュールの制約があり、フィードバックに時間差が生じる</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ⑤ 第10回との接続 -->
+  <div class="section">
+    <h2>📝 ④ 第10回（Cursor Rules）との接続</h2>
+    <p>第10回で整理した「日本語で効くRulesの書き方」の中に、「断定形で書く（〜してください、ではなく〜すること）」という原則があった。今回調べた「AIへの指示は肯定形で書くほうが効く」という原則と同じ構造だと気づいた。AIへの指示・人への指示問わず、「曖昧さを削ぎ落として断定で伝える」ことが、宛先を問わない共通の土台になっているようだ。</p>
+  </div>
+
+  <!-- ⑥ 自分の考え -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>（後日追記予定）</p>
+  </div>
+
+  <!-- ⑦ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li><a href="https://claude.com/blog/best-practices-for-prompt-engineering" target="_blank" rel="noopener">Prompt engineering best practices for 2026 | Claude by Anthropic</a> — AIプロンプト設計の原則</li>
+      <li><a href="https://www.digitalocean.com/resources/articles/prompt-engineering-best-practices" target="_blank" rel="noopener">Prompt Engineering Best Practices: Tips, Tricks, and Tools | DigitalOcean</a> — 肯定形指示・出力フォーマット明示の解説</li>
+      <li><a href="https://www.shore360.com/staff-management-blogs/effective-communication-with-offshore-teams/" target="_blank" rel="noopener">Effective Communication With Offshore Teams | Shore360</a> — オフショアチームへの伝え方</li>
+      <li><a href="https://ibsforyou.com/creating-sops-for-your-remote-team-or-offshore-team/" target="_blank" rel="noopener">A Complete Guide to Creating SOPs for Your Remote or Offshore Team</a> — 自己完結したSOP作成の考え方</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="013.html" class="nav-btn">← 第13回</a>
+  <a href="../index.html" class="nav-btn">ホーム</a>
+</div>
+
+<footer>
+  にじぼ Tech Notes — 七海ナナメのAI活用アウトプット
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursorの新機能「Origin」を調べた — GitHubの代わりになるコードホスティングか | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24; --danger: #f87171;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text2); margin-bottom: 12px; }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag { font-size: 0.72rem; padding: 3px 10px; border-radius: 20px; background: var(--bg3); color: var(--accent2); border: 1px solid var(--border); }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+    .section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .section h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+
+    .my-take { background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08)); border: 1px solid var(--accent); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* チェックリスト */
+    .checklist { list-style: none; padding: 0; margin: 12px 0; }
+    .checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: var(--text2); padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .checklist li:last-child { border-bottom: none; }
+    .check-icon { color: var(--success); font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+    .warn-icon { color: var(--danger); font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+
+    /* フロー図 */
+    .flow-wrap { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
+    .flow-step { display: flex; align-items: flex-start; gap: 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .flow-num { background: var(--accent); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+    .flow-content .flow-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .flow-content .flow-desc { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+    .flow-arrow { text-align: center; color: var(--text2); font-size: 0.9rem; }
+
+    /* 注意点カード */
+    .note-card { background: rgba(251,191,36,0.06); border: 1px solid var(--warn); border-radius: 8px; padding: 14px 16px; margin: 12px 0; font-size: 0.85rem; color: var(--text2); }
+    .note-card strong { color: var(--warn); }
+    .note-card p + p { margin-top: 8px; }
+
+    .ref-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; font-size: 0.85rem; color: var(--text2); }
+
+    .nav-bottom { max-width: 740px; margin: 0 auto 40px; padding: 0 24px; display: flex; gap: 12px; }
+    .nav-btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none; transition: all 0.15s; }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+    .sub-label { font-size: 0.75rem; font-weight: 700; color: var(--text); margin: 16px 0 6px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav><a href="../index.html">← ホーム</a></nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第16回</span>
+    <span>2026年9月20日（日）</span>
+    <span>🏗️ 開発基盤</span>
+  </div>
+  <h1 class="post-title">Cursorの新機能「Origin」を調べた<br>— GitHubの代わりになるコードホスティングか</h1>
+  <div class="post-tags">
+    <span class="tag">Cursor</span>
+    <span class="tag">Origin</span>
+    <span class="tag">GitHub</span>
+    <span class="tag">GitLab</span>
+    <span class="tag">AI活用</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 今回取り上げたもの -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>2026年8月17日にベータ公開されたCursorの新機能「Origin」を調べた。Cursorエディタに組み込まれたGitベースのコードホスティング機能で、GitHubの対抗馬として報じられている。自分の業務はGitLabベースのため、そのまま使えるものではないが、仕組みと現時点の制約、業務環境での位置づけを整理した。</p>
+  </div>
+
+  <!-- ② Originとは何か -->
+  <div class="section">
+    <h2>🏗️ ① Originとは何か</h2>
+    <p>Originは、Cursorエディタに組み込まれたGitベースのホスティングプラットフォームで、リポジトリ・プルリクエスト・コード閲覧・GitHub同期の4つが主要機能としてベータ提供されている。狙いは「コンテキストスイッチを減らすこと」——リポジトリもPRもコードレビューも、別タブのGitHubに移動せずエディタ内で完結させる設計になっている。</p>
+  </div>
+
+  <!-- ③ GitHub連携の仕組み -->
+  <div class="section">
+    <h2>🔄 ② GitHub連携の仕組み</h2>
+    <p>GitHub上のプロジェクトを数クリックでOriginにコピーできる統合機能が用意されている。GitHub側で更新があれば、その変更はOriginにも同期される。</p>
+
+    <div class="flow-wrap" style="margin-top:14px;">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <div class="flow-title">GitHubのプロジェクトをOriginにコピー</div>
+          <div class="flow-desc">数クリックの操作で既存リポジトリを取り込める。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <div class="flow-title">Origin上でリポジトリ・PR・コード閲覧を実施</div>
+          <div class="flow-desc">エディタ内で完結し、GitHubタブへの切り替えが不要になる。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <div class="flow-title">GitHubとの双方向同期</div>
+          <div class="flow-desc">Push・PRの活動はGitHub側にも反映される。GitHubが引き続き「正」のデータとして扱われる。</div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:12px; font-size:0.8rem; font-style:italic; color:var(--text2);">つまりOriginは今のところ「GitHubを置き換える」のではなく「GitHubと並行して使う」レイヤーという位置づけになっている。</p>
+  </div>
+
+  <!-- ④ 現時点の制約 -->
+  <div class="section">
+    <h2>⚠️ ③ 現時点の制約</h2>
+    <div class="note-card">
+      <p><strong>本番運用の記録媒体としてはまだ未成熟。</strong>公開からまだ日が浅い早期ベータであり、SLA・稼働率の公約・ステータスページの実績・レート制限やストレージ上限・SOC2やISO27001といったセキュリティ認証は、いずれも2026年8月末時点で未公開。</p>
+      <p><strong>GitHub同期が前提の機能。</strong>調べた範囲では、公式が案内している同期先はGitHubのみで、GitLabとの直接連携については情報が見当たらなかった。</p>
+    </div>
+  </div>
+
+  <!-- ⑤ GitLab環境での位置づけ -->
+  <div class="section">
+    <h2>💭 ④ GitLab環境での位置づけ</h2>
+    <p>第13回で調べたSubscriptions機能も、対応連携はGitHub・Slack・Linear・Timerのみでした。今回のOriginも同期先がGitHub中心である点を踏まえると、Cursorの最新機能はGitHub前提で先行整備が進み、GitLab環境は追随を待つ構図になりつつあるようだ。自分の業務のようにGitLabをメインで使っている場合、これらの新機能をすぐに業務へ組み込むのは難しく、GitHub対応が広がるまでは情報収集にとどめておくのが現実的だと考えている。</p>
+  </div>
+
+  <!-- ⑥ 自分の考え -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>（後日追記予定）</p>
+  </div>
+
+  <!-- ⑦ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li><a href="https://cursor.com/changelog/origin-code-hosting" target="_blank" rel="noopener">Origin Code Hosting · Cursor（公式changelog）</a> — 一次情報</li>
+      <li><a href="https://www.digitalocean.com/resources/articles/cursor-origin-vs-github" target="_blank" rel="noopener">Cursor Origin vs. GitHub: The 2026 Code-Hosting Face-Off | DigitalOcean</a> — GitHubとの比較解説</li>
+      <li><a href="https://venturebeat.com/infrastructure/cursor-launches-origin-code-hosting-platform-as-github-outage-exposes-opening-in-ai-coding-race" target="_blank" rel="noopener">Cursor launches Origin code hosting platform | VentureBeat</a> — リリース背景の報道</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="015.html" class="nav-btn">← 第15回</a>
+  <a href="../index.html" class="nav-btn">ホーム</a>
+</div>
+
+<footer>
+  にじぼ Tech Notes — 七海ナナメのAI活用アウトプット
+</footer>
+
+</body>
+</html>
