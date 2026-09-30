@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confluenceの用語集ページとCursorを連携させる仕組みを設計した | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24; --danger: #f87171;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text2); margin-bottom: 12px; }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag { font-size: 0.72rem; padding: 3px 10px; border-radius: 20px; background: var(--bg3); color: var(--accent2); border: 1px solid var(--border); }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+    .section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .section h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+
+    .my-take { background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08)); border: 1px solid var(--accent); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* フロー図 */
+    .flow-wrap { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
+    .flow-step { display: flex; align-items: flex-start; gap: 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .flow-num { background: var(--accent); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+    .flow-content .flow-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .flow-content .flow-desc { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+    .flow-arrow { text-align: center; color: var(--text2); font-size: 0.9rem; }
+
+    /* チェックリスト */
+    .checklist { list-style: none; padding: 0; margin: 12px 0; }
+    .checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: var(--text2); padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .checklist li:last-child { border-bottom: none; }
+    .check-icon { color: var(--success); font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+
+    /* コードブロック */
+    .code-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 12px 0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.78rem; color: var(--text2); overflow-x: auto; white-space: pre; }
+    .code-label { font-size: 0.7rem; color: var(--accent2); font-weight: 700; margin-bottom: 6px; }
+
+    /* 注意点カード */
+    .note-card { background: rgba(251,191,36,0.06); border: 1px solid var(--warn); border-radius: 8px; padding: 14px 16px; margin: 12px 0; font-size: 0.85rem; color: var(--text2); }
+    .note-card strong { color: var(--warn); }
+    .note-card p + p { margin-top: 8px; }
+
+    /* 後日追記プレースホルダー */
+    .pending { background: rgba(251,191,36,0.06); border: 1px dashed var(--warn); border-radius: var(--radius); padding: 18px 22px; margin-bottom: 16px; }
+    .pending h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--warn); margin-bottom: 8px; }
+    .pending p { font-size: 0.85rem; color: var(--text2); }
+
+    .ref-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; font-size: 0.85rem; color: var(--text2); }
+
+    .nav-bottom { max-width: 740px; margin: 0 auto 40px; padding: 0 24px; display: flex; gap: 12px; }
+    .nav-btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none; transition: all 0.15s; }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+    .sub-label { font-size: 0.75rem; font-weight: 700; color: var(--text); margin: 16px 0 6px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav><a href="../index.html">← ホーム</a></nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第12回</span>
+    <span>2026年8月14日（金）</span>
+    <span>📚 ナレッジ連携</span>
+  </div>
+  <h1 class="post-title">Confluenceの用語集ページと<br>Cursorを連携させる仕組みを設計した</h1>
+  <div class="post-tags">
+    <span class="tag">Cursor</span>
+    <span class="tag">Confluence</span>
+    <span class="tag">MCP</span>
+    <span class="tag">ナレッジ連携</span>
+    <span class="tag">AI活用</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 今回取り上げたもの -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>第10回の「自分の考え」で触れた「案件Confluenceの用語集ページと連携できれば、案件内容の理解をさせやすくなるのでは」というアイデアを、実際の検証設計まで落とし込んだ。案件特有の用語（略称・社内呼称など）をAIが正しく理解できていないと、指示の解釈がずれて手戻りが起きやすい。この仮説を検証する仕組みを今回設計した。実践はまだ行っていないため、今回は設計と方針整理まで。</p>
+  </div>
+
+  <!-- ② Atlassian公式MCPでできること -->
+  <div class="section">
+    <h2>🔌 ① Atlassian公式MCPサーバーで実現できること</h2>
+    <p>ConfluenceをCursorに接続する方法を調べたところ、Atlassian公式が提供するリモートMCPサーバー（Jira・Confluence・Bitbucketを1つの設定でまとめて扱える）が有力な選択肢として見つかった。</p>
+
+    <ul class="checklist" style="margin-top:14px;">
+      <li><span class="check-icon">✓</span><span><strong>ページ検索</strong> — キーワードから該当するConfluenceページを検索できる</span></li>
+      <li><span class="check-icon">✓</span><span><strong>ページ取得＋Markdown変換</strong> — Wikiコンテンツを読み込みAIが扱いやすい形式に変換する</span></li>
+      <li><span class="check-icon">✓</span><span><strong>特定ページの参照</strong> — プロンプト内で対象ページを直接指定して読み込ませられる</span></li>
+      <li><span class="check-icon">✓</span><span><strong>要約・分析</strong> — 取得した内容をもとにAIが要約・関連付けを行える</span></li>
+    </ul>
+
+    <p style="margin-top:12px; font-size:0.8rem; font-style:italic; color:var(--text2);">GitLab MCPがPersonal Access Token方式だったのに対し、Atlassian公式MCPはOAuth連携が前提になっている点が異なる。</p>
+  </div>
+
+  <!-- ③ 想定するセットアップ -->
+  <div class="section">
+    <h2>⚙️ ② 想定するセットアップ</h2>
+
+    <div class="flow-wrap" style="margin-top:6px;">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <div class="flow-title">Atlassian公式MCPをOAuth連携</div>
+          <div class="flow-desc">社内Confluenceのワークスペースに対してOAuth認証を行う。トークンを直接扱う必要がない。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <div class="flow-title">.cursor/mcp.json に設定を追加</div>
+          <div class="flow-desc">MCPサーバーのエンドポイントをCursorの設定に登録する。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <div class="flow-title">案件用語集ページのIDを控えておく</div>
+          <div class="flow-desc">対象の用語集ページを特定できるようにし、参照時に迷わないようにする。</div>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-content">
+          <div class="flow-title">Cursor Ruleに参照条件を明記</div>
+          <div class="flow-desc">案件特有の用語が出てきた際に、用語集ページを自動参照するようルール化する。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-label" style="margin-top:20px;">.cursor/mcp.json の設定イメージ</div>
+    <div class="code-block">{
+  "mcpServers": {
+    "atlassian": {
+      "url": "https://mcp.atlassian.com/v1/sse"
+    }
+  }
+}</div>
+    <p style="font-size:0.78rem; color:var(--text2); margin-top:6px;">※ OAuth認証のため、初回接続時にブラウザでの認可フローが発生する想定。実際の値は導入時に要確認。</p>
+  </div>
+
+  <!-- ④ Cursor Ruleの設計案 -->
+  <div class="section">
+    <h2>📝 ③ Cursor Ruleの設計案</h2>
+    <p>第10回で整理した4カテゴリでいうと、この用語集参照ルールは「マイクロワークフロー」に近い。常時読み込む必要はなく、案件特有の用語が話題に出たときだけ自動適用させたいため、<strong style="color:var(--text);">Agent Requested</strong>で設計するのが適切だと考えている。</p>
+
+    <div class="code-label" style="margin-top:14px;">📄 .cursor/rules/confluence-glossary.mdc（設計イメージ）</div>
+    <div class="code-block">---
+description: "案件特有の用語・略称が話題に出た際に、Confluenceの用語集ページを参照して正しい定義を確認する"
+---
+
+## 用語集参照ルール
+
+- 案件特有の用語・略称・社内呼称が出てきた場合、
+  推測で処理せずConfluence MCPで用語集ページを参照すること
+- 参照した用語の定義が既存の理解と異なる場合、
+  その旨をチャットで明示すること</div>
+  </div>
+
+  <!-- ⑤ 注意点・限界 -->
+  <div class="section">
+    <h2>⚠️ 注意点・限界</h2>
+    <div class="note-card">
+      <p><strong>Pull型であり、自動同期ではない。</strong>Cursorが自発的に更新を検知するわけではなく、都度リクエストした時点の内容しか取得できない。用語集ページが更新されても、次にAIが参照するまでは古い定義のまま処理される可能性がある。</p>
+      <p><strong>OAuth連携の社内申請が必要になりそう。</strong>GitLab MCPのPAT方式と異なり、ワークスペース単位の認可が必要なため、導入には情シス側の許可が必要になるケースが多いと考えられる。</p>
+    </div>
+  </div>
+
+  <!-- ⑥ 自分の考え -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>（後日、実践した上で追記予定）</p>
+  </div>
+
+  <!-- ⑦ 後日追記 -->
+  <div class="pending">
+    <h2>🔄 後日追記：実践してみた結果</h2>
+    <p>Atlassian公式MCPの導入可否・OAuth連携の実際の手間・用語集参照による案件理解度の変化を実際に試した結果を追記予定。</p>
+  </div>
+
+  <!-- ⑧ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li><a href="https://webmcpguide.com/articles/confluence-mcp-server-cursor-ide-setup-2026" target="_blank" rel="noopener">Confluence MCP Server Setup for Cursor IDE (2026) | WebMCPGuide</a> — セットアップ手順の解説</li>
+      <li><a href="https://support.atlassian.com/atlassian-rovo-mcp-server/docs/setting-up-ides/" target="_blank" rel="noopener">Setting up IDEs (desktop clients) | Atlassian Rovo MCP Server Cloud</a> — Atlassian公式のIDE連携ドキュメント</li>
+      <li><a href="https://composio.dev/toolkits/confluence/framework/cursor" target="_blank" rel="noopener">How to connect Confluence MCP with Cursor (Composio)</a> — 接続手順の整理</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="011.html" class="nav-btn">← 第11回</a>
+  <a href="../index.html" class="nav-btn">ホーム</a>
+</div>
+
+<footer>
+  にじぼ Tech Notes — 七海ナナメのAI活用アウトプット
+</footer>
+
+</body>
+</html>

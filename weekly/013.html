@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursorの新機能「Subscriptions」でクラウドエージェントがイベント駆動で動く仕組みを調べた | にじぼ Tech Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --accent: #6c8aff; --accent2: #a78bfa;
+      --text: #e2e8f0; --text2: #94a3b8; --border: #2d3248;
+      --success: #34d399; --warn: #fbbf24; --danger: #f87171;
+      --radius: 12px; --font: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.8; }
+    a { color: var(--accent); }
+
+    header {
+      background: #1a1d27; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a { color: var(--text2); font-size: 0.85rem; margin-left: 20px; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    .post-hero { max-width: 740px; margin: 40px auto 0; padding: 0 24px; }
+    .post-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text2); margin-bottom: 12px; }
+    .post-num { background: var(--accent); color: white; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 0.72rem; }
+    .post-title { font-size: 1.8rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; }
+    .post-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 32px; }
+    .tag { font-size: 0.72rem; padding: 3px 10px; border-radius: 20px; background: var(--bg3); color: var(--accent2); border: 1px solid var(--border); }
+
+    .post-body { max-width: 740px; margin: 0 auto 60px; padding: 0 24px; }
+    .section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .section h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .section p { font-size: 0.9rem; color: var(--text2); }
+    .section p + p { margin-top: 10px; }
+
+    .my-take { background: linear-gradient(135deg, rgba(108,138,255,0.08), rgba(167,139,250,0.08)); border: 1px solid var(--accent); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; }
+    .my-take h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .my-take p { font-size: 0.9rem; color: var(--text); }
+    .my-take p + p { margin-top: 12px; }
+
+    /* フロー図 */
+    .flow-wrap { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
+    .flow-step { display: flex; align-items: flex-start; gap: 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .flow-num { background: var(--accent); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+    .flow-content .flow-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .flow-content .flow-desc { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+    .flow-arrow { text-align: center; color: var(--text2); font-size: 0.9rem; }
+
+    /* チェックリスト */
+    .checklist { list-style: none; padding: 0; margin: 12px 0; }
+    .checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: var(--text2); padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .checklist li:last-child { border-bottom: none; }
+    .check-icon { color: var(--success); font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+    .warn-icon { color: var(--danger); font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+
+    /* 比較テーブル */
+    .compare-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.82rem; }
+    .compare-table th { background: var(--bg3); color: var(--accent); font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    .compare-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .ok-text { color: var(--success); font-weight: 700; }
+    .ng-text { color: var(--danger); }
+
+    /* コードブロック */
+    .code-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 12px 0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.78rem; color: var(--text2); overflow-x: auto; white-space: pre; }
+    .code-label { font-size: 0.7rem; color: var(--accent2); font-weight: 700; margin-bottom: 6px; }
+
+    /* 注意点カード */
+    .note-card { background: rgba(251,191,36,0.06); border: 1px solid var(--warn); border-radius: 8px; padding: 14px 16px; margin: 12px 0; font-size: 0.85rem; color: var(--text2); }
+    .note-card strong { color: var(--warn); }
+    .note-card p + p { margin-top: 8px; }
+
+    /* 後日追記プレースホルダー */
+    .pending { background: rgba(251,191,36,0.06); border: 1px dashed var(--warn); border-radius: var(--radius); padding: 18px 22px; margin-bottom: 16px; }
+    .pending h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--warn); margin-bottom: 8px; }
+    .pending p { font-size: 0.85rem; color: var(--text2); }
+
+    .ref-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+    .ref-card h2 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card ul li { margin-bottom: 6px; font-size: 0.85rem; color: var(--text2); }
+
+    .nav-bottom { max-width: 740px; margin: 0 auto 40px; padding: 0 24px; display: flex; gap: 12px; }
+    .nav-btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); text-decoration: none; transition: all 0.15s; }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    footer { text-align: center; padding: 24px; font-size: 0.75rem; color: var(--text2); border-top: 1px solid var(--border); }
+    .sub-label { font-size: 0.75rem; font-weight: 700; color: var(--text); margin: 16px 0 6px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">にじぼ <span>Tech Notes</span></div>
+  <nav><a href="../index.html">← ホーム</a></nav>
+</header>
+
+<div class="post-hero">
+  <div class="post-meta">
+    <span class="post-num">第13回</span>
+    <span>2026年8月29日（土）</span>
+    <span>🔔 イベント駆動自動化</span>
+  </div>
+  <h1 class="post-title">Cursorの新機能「Subscriptions」で<br>クラウドエージェントがイベント駆動で動く仕組みを調べた</h1>
+  <div class="post-tags">
+    <span class="tag">Cursor</span>
+    <span class="tag">Cloud Agent</span>
+    <span class="tag">Subscriptions</span>
+    <span class="tag">イベント駆動</span>
+    <span class="tag">AI活用</span>
+  </div>
+</div>
+
+<div class="post-body">
+
+  <!-- ① 今回取り上げたもの -->
+  <div class="section">
+    <h2>📌 今回取り上げたもの</h2>
+    <p>2026年8月19日にCursorがリリースした「Subscriptions（購読）」機能について調べた。クラウドエージェントがPRやSlackスレッドなどのイベントを待ち受け、再度プロンプトを送らなくても発生時に自動で作業を再開できる仕組みだという。実践はまだ行っていないため、今回は公式ドキュメントをもとにした仕組みの理解と、自分の業務での活用可能性の整理まで。</p>
+  </div>
+
+  <!-- ② Subscriptionsとは何か -->
+  <div class="section">
+    <h2>🔔 ① Subscriptionsとは何か</h2>
+    <p>公式ドキュメントでは、この機能の背景を次のように説明している。</p>
+    <p style="font-style:italic; border-left:3px solid var(--accent); padding-left:12px; margin:10px 0;">「エージェントの作業は最後のコミットで終わらないことが多い。CIを通す必要があるし、レビュアーはコメントを残す。チームメイトがSlackで質問に答える必要もある」（Cursor公式ドキュメントより意訳）</p>
+    <p>Subscriptionsは、こうした「後続の反応待ち」の間エージェントを待機させ、該当イベントが発生した時点で同じ会話の続きとして自動的に作業を再開させる機能だ。エージェントはイベントソースを購読すると一旦ターンを終了し、条件に合うイベントが届いた時点で目を覚ます。届いたイベントはフォローアップメッセージとして同じ会話に追加されるため、それまでの文脈を保ったまま作業を続けられる。</p>
+  </div>
+
+  <!-- ③ 購読できるイベントの種類 -->
+  <div class="section">
+    <h2>📡 ② 購読できるイベントの種類</h2>
+    <table class="compare-table" style="margin-top:6px;">
+      <tr>
+        <th>連携先</th>
+        <th>購読できるイベント</th>
+      </tr>
+      <tr>
+        <td>GitHub</td>
+        <td>PR活動（コメント・レビュー・ライフサイクルの変化）を1件のPR／リポジトリ全体／特定作者のPR単位で監視。ブランチのCI結果も対象。</td>
+      </tr>
+      <tr>
+        <td>Slack</td>
+        <td>スレッドへの返信、チャンネルへの新規メッセージ、新規パブリックチャンネルの作成。</td>
+      </tr>
+      <tr>
+        <td>Linear</td>
+        <td>Issueの作成・ステータス変化、Issueへの新規コメント。</td>
+      </tr>
+      <tr>
+        <td>Timers</td>
+        <td>一定時間後の単発リマインダー、または<code>/loop</code>による定期実行。</td>
+      </tr>
+    </table>
+    <p style="margin-top:10px; font-size:0.8rem; font-style:italic; color:var(--text2);">現時点でGitLabは購読対象の連携リストに含まれていない（2026年8月時点）。</p>
+  </div>
+
+  <!-- ④ 使い方 -->
+  <div class="section">
+    <h2>⚙️ ③ 使い方</h2>
+    <p>購読はプロンプトの中で「何を待つか」を自然言語で書くだけで設定できる。例えば次のような指示になる。</p>
+
+    <div class="code-block">open a PR and keep it green until merge
+（PRを作成し、マージされるまでCIを緑に保ち続けて）
+
+ask in #releases and wait for approval
+（#releasesチャンネルで質問し、承認を待って）</div>
+
+    <p>専用の<code>/subscribe</code>スキルを呼び出す方法もあり、こちらも同様に「何を監視するか」を伝えるだけでエージェントが適切な購読を選ぶ。また、クラウドエージェントが自分で作成したPRには自動的に購読が設定され、CI失敗の修正やBotコメントへの対応まで自律的に行われる。</p>
+
+    <ul class="checklist" style="margin-top:14px;">
+      <li><span class="check-icon">✓</span><span><strong>クラウドエージェント限定</strong> — 現時点ではローカルのCursor Agentではなく、クラウド上で動くエージェントのみが対象</span></li>
+      <li><span class="check-icon">✓</span><span><strong>複数イベントの束ね処理</strong> — 短時間に複数のイベントが届いても1回だけ起床し、対象（PR・スレッド・Issue）を読み直してから動く</span></li>
+      <li><span class="check-icon">✓</span><span><strong>最長180日</strong> — 購読は最長180日で失効する。待機が完了すればエージェント自身が購読を解除する</span></li>
+    </ul>
+  </div>
+
+  <!-- ⑤ これまでの連載との関係 -->
+  <div class="section">
+    <h2>💭 ④ これまでの連載との関係</h2>
+    <p>第8回・第11回で扱ったGitLab MCPによるMR作成・レビュー連携は、いずれも「こちらから都度依頼する（プル型）」操作だった。Subscriptionsはその先にある考え方で、エージェント側が「イベントが起きるまで待って、起きたら自律的に動く」プッシュ型に近い設計になっている。</p>
+    <p>ただし現状の対応連携はGitHub・Slack・Linear・Timerのみで、GitLabは含まれていない。自分の業務環境はGitLabベースのため、この機能をそのまま使うにはGitHub連携への移行、またはGitLab対応が追加されるのを待つ必要がありそうだ。</p>
+  </div>
+
+  <!-- ⑥ 注意点 -->
+  <div class="section">
+    <h2>⚠️ 注意点</h2>
+    <div class="note-card">
+      <p><strong>クラウドエージェント限定の機能。</strong>ローカルのIDE上のCursor Agentでは利用できず、Cursor Cloud（クラウド実行環境）を使っている前提の機能になる。</p>
+      <p><strong>GitLabは現時点で非対応。</strong>自分の業務で使うにはGitHub連携への移行、または今後のGitLab対応を待つ必要がある。</p>
+    </div>
+  </div>
+
+  <!-- ⑦ 自分の考え -->
+  <div class="my-take">
+    <h2>💡 自分の考え・業務への活用案</h2>
+    <p>（後日追記予定）</p>
+  </div>
+
+  <!-- ⑧ 後日追記 -->
+  <div class="pending">
+    <h2>🔄 後日追記：実践してみた結果</h2>
+    <p>Cloud Agentの利用可否・GitHub連携での購読設定・実際の待機〜再開の挙動を確認した結果を追記予定。</p>
+  </div>
+
+  <!-- ⑨ 参考リンク -->
+  <div class="ref-card">
+    <h2>🔗 参考リンク</h2>
+    <ul>
+      <li><a href="https://cursor.com/changelog/08-19-26" target="_blank" rel="noopener">Cloud Agents and Cursor Harness Improvements（Cursor公式changelog）</a> — Subscriptions発表の一次情報</li>
+      <li><a href="https://cursor.com/docs/cloud-agent/capabilities" target="_blank" rel="noopener">Capabilities | Cursor Docs</a> — 連携先イベント種類・仕様の詳細</li>
+      <li><a href="https://aiweekly.co/alerts/cursor-gives-cloud-agents-subscriptions-goal-and-subagent-vms" target="_blank" rel="noopener">Cursor gives cloud agents subscriptions, /goal and subagent VMs（AI Weekly）</a> — 機能の概要解説</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="nav-bottom">
+  <a href="012.html" class="nav-btn">← 第12回</a>
+  <a href="../index.html" class="nav-btn">ホーム</a>
+</div>
+
+<footer>
+  にじぼ Tech Notes — 七海ナナメのAI活用アウトプット
+</footer>
+
+</body>
+</html>
